@@ -1,4 +1,5 @@
-import { useState, useRef, useMemo } from "react";
+import { useState, useRef, useMemo,useEffect } from "react";
+import { useNavigate,useParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Trash2, Image as ImageIcon } from "lucide-react";
 
@@ -23,6 +24,8 @@ export default function TestCreator() {
   ================================================== */
   const [title, setTitle] = useState("");
   const [duration, setDuration] = useState(60);
+  const navigate = useNavigate();
+  const { testId } = useParams();
 
   const [sections, setSections] = useState([
     {
@@ -40,6 +43,44 @@ export default function TestCreator() {
     () => sections.find((s) => s.id === activeSectionId),
     [sections, activeSectionId]
   );
+
+  /* ==================================================
+     test updation if testId is present (edit mode)
+  ================================================== */
+  useEffect(() => {
+    if (!testId) return;
+
+    const allTests = JSON.parse(localStorage.getItem("tests")) || [];
+
+    const existing = allTests.find(
+      (t) => String(t.id) === String(testId)
+    );
+
+    if (!existing) {
+      alert("Test not found!");
+      navigate("/creator-dashboard");
+      return;
+    }
+
+    setTitle(existing.title || "");
+    setDuration(existing.duration || 60);
+
+    if (existing.sections && existing.sections.length > 0) {
+      setSections(existing.sections);
+      setActiveSectionId(existing.sections[0].id);
+    } else {
+      // fallback for old structure
+      setSections([
+        {
+          id: 1,
+          name: "Section 1",
+          time: existing.duration || 30,
+          questions: existing.questions || [],
+        },
+      ]);
+      setActiveSectionId(1);
+    }
+  }, [testId]);
 
   /* ==================================================
      SECTION HELPERS
@@ -173,12 +214,121 @@ export default function TestCreator() {
     questionRefs.current[qid]?.scrollIntoView({ behavior: "smooth", block: "center" });
   };
 
-  const saveTest = () => {
-    const payload = { title, duration, sections };
-    localStorage.setItem("createdTest", JSON.stringify(payload));
-    alert("Test saved successfully!");
-  };
+// const saveTest = () => {
+  
+//   if (!title || !duration || sections.every((s) => s.questions.length === 0)) {
+//     alert("Please complete all fields");
+//     return;
+//   }
 
+//   const creator = localStorage.getItem("creatorUser");
+
+//   if (!creator) {
+//     alert("Not authorized");
+//     return;
+//   }
+
+//   const allTests = JSON.parse(localStorage.getItem("tests")) || [];
+//   const totalMarks = sections.reduce(
+//       (acc, sec) =>
+//         acc +
+//         sec.questions.reduce(
+//           (qAcc, q) => qAcc + Number(q.marks || 0),
+//           0
+//         ),
+//       0
+//     );
+
+//   const newTest = {
+//     id: "TST-" + Math.random().toString(36).substring(2, 8).toUpperCase(),
+//     title,
+//     duration: Number(duration),
+//     sections,
+//     totalMarks,
+//     attempts: 0,
+//     published: true,
+//     createdBy: creator,   // VERY IMPORTANT
+//     createdAt: new Date().toISOString(),
+//   };
+
+//   const updatedTests = [...allTests, newTest];
+
+//   localStorage.setItem("tests", JSON.stringify(updatedTests));
+
+//   alert("Test Created Successfully!");
+
+//   navigate("/creator-dashboard"); // redirect after save
+// };
+
+const saveTest = () => {
+  if (!title || sections.every((s) => s.questions.length === 0)) {
+    alert("Add at least one question");
+    return;
+  }
+
+  const creator = localStorage.getItem("creatorUser");
+  const allTests = JSON.parse(localStorage.getItem("tests")) || [];
+
+  const totalMarks = sections.reduce(
+    (acc, sec) =>
+      acc +
+      sec.questions.reduce(
+        (qAcc, q) => qAcc + Number(q.marks || 0),
+        0
+      ),
+    0
+  );
+
+  if (testId) {
+    // 🔥 FIND INDEX INSTEAD OF MAP
+    const index = allTests.findIndex(
+      (t) => t.id.trim() === testId.trim()
+    );
+
+    if (index === -1) {
+      alert("Original test not found. Cannot update.");
+      return;
+    }
+
+    // 🔥 UPDATE DIRECTLY BY INDEX
+    allTests[index] = {
+      ...allTests[index], // preserve original id + metadata
+      title,
+      duration: Number(duration),
+      sections,
+      totalMarks,
+      updatedAt: new Date().toISOString(),
+    };
+
+    localStorage.setItem("tests", JSON.stringify(allTests));
+
+    alert("Test Updated Successfully!");
+  } else {
+    // CREATE MODE
+    const newTest = {
+      id:
+        "TST-" +
+        Math.random().toString(36).substring(2, 8).toUpperCase(),
+      title,
+      duration: Number(duration),
+      sections,
+      totalMarks,
+      attempts: 0,
+      published: true,
+      createdBy: creator,
+      createdAt: new Date().toISOString(),
+    };
+
+    localStorage.setItem(
+      "tests",
+      JSON.stringify([...allTests, newTest])
+    );
+
+    alert("Test Created Successfully!");
+  }
+
+  navigate("/creator-dashboard");
+};
   /* ==================================================
      TOTAL MARKS CALCULATION
   ================================================== */

@@ -34,6 +34,7 @@ export default function App() {
           }
         />
         <Route path="/create-test" element={<TestCreator />} />
+        <Route path="/create-test/:testId" element={<TestCreator />} />
       </Routes>
     </BrowserRouter>
   );
