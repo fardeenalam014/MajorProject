@@ -5,6 +5,8 @@ import ExamPage from "../pages/ExamPage";
 import TestCreator from "../pages/TestCreator";
 import StudentDashboard from "../pages/StudentDashboard";
 import CreatorDashboard from "../pages/CreatorDashboard";
+import AdvanceExamPage from "../pages/AdvanceExamPAge";
+import LandingPage from "../pages/LandingPage";
 
 // simple auth check
 const isLoggedIn = () => {
@@ -20,16 +22,17 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<Login />} />
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/student-dashboard" element={<StudentDashboard />} />
         <Route path="/creator-dashboard" element={<CreatorDashboard />} />
 
         <Route
-          path="/exam"
+          path="/exam/:testId"
           element={
             <PrivateRoute>
-              <ExamPage />
+              <AdvanceExamPage/>
             </PrivateRoute>
           }
         />

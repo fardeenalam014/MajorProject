@@ -1,150 +1,176 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { User, GraduationCap } from "lucide-react";
+import {
+  GraduationCap, ShieldCheck,
+  Eye, EyeOff, CheckCircle2, User,
+} from "lucide-react";
+import Logo from "../components/Logo";
 
-/*
-  Modern creative Register page
-  ✨ Card style role selector (instead of plain buttons)
-  ✨ Animated selection
-  ✨ Separate localStorage for students & creators
-  ✨ Clean, premium UI
-*/
+const FontLoader = () => (
+  <style>{`
+    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
+    body { font-family: 'DM Sans', sans-serif; }
+    .mono { font-family: 'DM Mono', monospace; }
+    @keyframes fade-up {
+      from { opacity: 0; transform: translateY(14px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .fade-up { animation: fade-up .35s ease both; }
+  `}</style>
+);
 
 export default function Register() {
   const navigate = useNavigate();
 
-  const [mode, setMode] = useState("student");
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
+  const [mode, setMode]         = useState("student");
+  const [name, setName]         = useState("");
+  const [email, setEmail]       = useState("");
   const [password, setPassword] = useState("");
+  const [showPass, setShowPass] = useState(false);
 
   const handleRegister = (e) => {
     e.preventDefault();
-
-    const key = mode === "student" ? "students" : "creators";
+    const key   = mode === "student" ? "students" : "creators";
     const users = JSON.parse(localStorage.getItem(key)) || [];
-
-    if (users.find((u) => u.email === email)) {
-      alert("Email already exists");
-      return;
-    }
-
+    if (users.find(u => u.email === email)) { alert("Email already exists"); return; }
     users.push({ name, email, password });
     localStorage.setItem(key, JSON.stringify(users));
-
     alert("Registered successfully!");
     navigate("/");
   };
 
   return (
-    <div className="min-h-screen  min-w-screen  bg-gradient-to-br from-slate-950 via-indigo-950 to-black text-white flex items-center justify-center p-6">
-      <motion.div
-        initial={{ opacity: 0, y: 30 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-2xl bg-slate-900/70 backdrop-blur-xl rounded-3xl shadow-2xl p-10 border border-slate-700"
-      >
-        {/* ============================
-            TITLE
-        ============================ */}
-        <h1 className="text-3xl font-bold text-center mb-8 bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-          Create Your Account
-        </h1>
+    <div style={{ fontFamily: "'DM Sans', sans-serif" }}
+      className="min-h-screen min-w-screen bg-zinc-950 text-zinc-100 flex flex-col items-center justify-center p-4 gap-6">
+      <FontLoader />
 
-        {/* ============================
-            CREATIVE ROLE SELECTOR
-        ============================ */}
-        <div className="grid grid-cols-2 gap-5 mb-8">
-          {/* Student Card */}
-          <motion.div
-            whileHover={{ scale: 1.04 }}
-            onClick={() => setMode("student")}
-            className={`cursor-pointer p-6 rounded-2xl border transition-all shadow-lg ${
-              mode === "student"
-                ? "bg-blue-600/20 border-blue-500"
-                : "bg-slate-800/70 border-slate-700 hover:border-blue-400"
-            }`}
-          >
-            <div className="flex flex-col items-center text-center gap-3">
-              <GraduationCap size={40} />
-              <h3 className="font-semibold text-lg">Student</h3>
-              <p className="text-xs text-slate-400">
-                Attempt tests, track scores, AI‑proctored exams
-              </p>
-            </div>
-          </motion.div>
+      {/* grid bg */}
+      <div className="pointer-events-none fixed inset-0"
+        style={{
+          backgroundImage:
+            "linear-gradient(rgba(99,102,241,.04) 1px, transparent 1px)," +
+            "linear-gradient(90deg, rgba(99,102,241,.04) 1px, transparent 1px)",
+          backgroundSize: "48px 48px",
+        }}
+      />
 
-          {/* Creator Card */}
-          <motion.div
-            whileHover={{ scale: 1.04 }}
-            onClick={() => setMode("creator")}
-            className={`cursor-pointer p-6 rounded-2xl border transition-all shadow-lg ${
-              mode === "creator"
-                ? "bg-purple-600/20 border-purple-500"
-                : "bg-slate-800/70 border-slate-700 hover:border-purple-400"
-            }`}
-          >
-            <div className="flex flex-col items-center text-center gap-3">
-              <User size={40} />
-              <h3 className="font-semibold text-lg">Test Creator</h3>
-              <p className="text-xs text-slate-400">
-                Build tests, sections, timers, marks & questions
-              </p>
-            </div>
-          </motion.div>
+      {/* logo — outside the box */}
+      <div className="relative fade-up">
+        <Logo size="md" />
+      </div>
+
+      {/* card */}
+      <div className="relative w-full max-w-md bg-zinc-900 border border-zinc-800
+        rounded-2xl shadow-2xl shadow-black/50 p-8 fade-up"
+        style={{ animationDelay: ".08s" }}>
+
+        <div className="mb-5">
+          <p className="text-4xl font-bold text-zinc-100">Create your account</p>
+          <p className="text-sm text-zinc-500 mt-1">Join AIExamGuard today</p>
         </div>
 
-        {/* ============================
-            FORM
-        ============================ */}
-        <form onSubmit={handleRegister} className="space-y-4">
-          <input
-            type="text"
-            placeholder="Full Name"
-            required
-            onChange={(e) => setName(e.target.value)}
-            className="w-full p-3 rounded-xl bg-slate-800 border border-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none"
-          />
+        {/* role selector */}
+        <div className="grid grid-cols-2 gap-3 mb-5">
+          {[
+            { key: "student", label: "Student",      icon: GraduationCap, desc: "Attempt AI-proctored exams" },
+            { key: "creator", label: "Test Creator",  icon: ShieldCheck,   desc: "Build and publish tests"    },
+          ].map(({ key, label, icon: Icon, desc }) => (
+            <motion.button
+              key={key}
+              type="button"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: .98 }}
+              onClick={() => setMode(key)}
+              className={`flex flex-col items-center gap-2 p-4 rounded-xl border text-center
+                transition-all duration-150
+                ${mode === key
+                  ? "bg-indigo-500/10 border-indigo-500/40 text-indigo-300"
+                  : "bg-zinc-800/50 border-zinc-700 text-zinc-500 hover:border-zinc-600 hover:text-zinc-300"
+                }`}
+            >
+              <Icon size={22} />
+              <span className="text-sm font-semibold">{label}</span>
+              <span className="mono text-[9px] text-zinc-600 leading-relaxed">{desc}</span>
+            </motion.button>
+          ))}
+        </div>
 
-          <input
-            type="email"
-            placeholder="Email"
-            required
-            onChange={(e) => setEmail(e.target.value)}
-            className="w-full p-3 rounded-xl bg-slate-800 border border-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none"
-          />
+        {/* form */}
+        <form onSubmit={handleRegister} className="flex flex-col gap-3">
 
-          <input
-            type="password"
-            placeholder="Password"
-            required
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full p-3 rounded-xl bg-slate-800 border border-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none"
-          />
+          <div className="flex flex-col gap-1.5">
+            <label className="mono text-[10px] text-zinc-500 uppercase tracking-widest">
+              Full Name
+            </label>
+            <div className="relative">
+              <User size={13} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-600" />
+              <input
+                type="text"
+                placeholder="John Doe"
+                required
+                onChange={e => setName(e.target.value)}
+                className="w-full bg-zinc-800 border border-zinc-700 rounded-xl pl-9 pr-4 py-3
+                  text-sm text-zinc-200 placeholder:text-zinc-600 outline-none
+                  focus:border-indigo-500/60 focus:ring-2 focus:ring-indigo-500/15 transition-all"
+              />
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <label className="mono text-[10px] text-zinc-500 uppercase tracking-widest">
+              Email
+            </label>
+            <input
+              type="email"
+              placeholder="you@example.com"
+              required
+              onChange={e => setEmail(e.target.value)}
+              className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-3
+                text-sm text-zinc-200 placeholder:text-zinc-600 outline-none
+                focus:border-indigo-500/60 focus:ring-2 focus:ring-indigo-500/15 transition-all"
+            />
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <label className="mono text-[10px] text-zinc-500 uppercase tracking-widest">
+              Password
+            </label>
+            <div className="relative">
+              <input
+                type={showPass ? "text" : "password"}
+                placeholder="••••••••"
+                required
+                onChange={e => setPassword(e.target.value)}
+                className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-3 pr-11
+                  text-sm text-zinc-200 placeholder:text-zinc-600 outline-none
+                  focus:border-indigo-500/60 focus:ring-2 focus:ring-indigo-500/15 transition-all"
+              />
+              <button type="button"
+                onClick={() => setShowPass(s => !s)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-600
+                  hover:text-zinc-400 transition-colors">
+                {showPass ? <EyeOff size={15} /> : <Eye size={15} />}
+              </button>
+            </div>
+          </div>
 
           <motion.button
-            whileTap={{ scale: 0.96 }}
-            className={`w-full py-3 rounded-xl font-semibold transition ${
-              mode === "student"
-                ? "bg-blue-600 hover:bg-blue-700"
-                : "bg-purple-600 hover:bg-purple-700"
-            }`}
-          >
+            type="submit"
+            whileTap={{ scale: .98 }}
+            className="w-full mt-2 py-3 rounded-xl text-sm font-semibold
+              bg-indigo-500 hover:bg-indigo-400 text-white transition-colors">
             Register as {mode === "student" ? "Student" : "Creator"}
           </motion.button>
         </form>
 
-        {/* Footer */}
-        <p className="text-center text-sm text-slate-400 mt-6">
-          Already registered?{' '}
-          <span
-            onClick={() => navigate("/")}
-            className="text-indigo-400 cursor-pointer hover:underline"
-          >
-            Login here
-          </span>
+        <p className="text-sm text-center mt-6 text-zinc-600">
+          Already have an account?{" "}
+          <Link to="/" className="text-indigo-400 hover:text-indigo-300 transition-colors">
+            Sign in
+          </Link>
         </p>
-      </motion.div>
+      </div>
     </div>
   );
 }
