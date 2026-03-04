@@ -6,6 +6,8 @@ import {
   Eye, EyeOff, CheckCircle2,
 } from "lucide-react";
 import Logo from "../components/Logo";
+import { authAPI } from "../utils/api";
+import { useAuth } from "../context/AuthContext";
 
 const FontLoader = () => (
   <style>{`
@@ -37,26 +39,40 @@ const FEATURES = {
 
 export default function Login() {
   const navigate = useNavigate();
+  const { login: saveAuth } = useAuth();
 
   const [role, setRole]         = useState("student");
   const [email, setEmail]       = useState("");
   const [password, setPassword] = useState("");
   const [showPass, setShowPass] = useState(false);
 
-  const handleLogin = (e) => {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  const handleLogin = async (e) => {
     e.preventDefault();
-    const key   = role === "student" ? "students" : "creators";
-    const users = JSON.parse(localStorage.getItem(key)) || [];
-    const found = users.find(u => u.email === email && u.password === password);
-    if (!found) { alert("Invalid credentials"); return; }
-    localStorage.setItem("userRole",  role);
-    localStorage.setItem("userEmail", email);
-    if (role === "student") {
-      localStorage.setItem("studentUser", email);
-      navigate("/student-dashboard");
+    setError(null);
+    setLoading(true);
+    const payload = { email, password };
+    const { data, error: err } = await authAPI.login(payload);
+    setLoading(false);
+    if (err) {
+      setError(err);
+      return;
+    }
+    // data contains { success, token, user }
+    if (data?.success) {
+      // Ensure the role returned by the server matches the selected role on the form
+      if (data.user?.role !== role) {
+        setError("Invalid credentials ");
+        return;
+      }
+      // persist auth and go to the appropriate dashboard for the selected role
+      saveAuth({ token: data.token, user: data.user });
+      const dest = role === 'creator' ? '/creator-dashboard' : '/student-dashboard';
+      navigate(dest);
     } else {
-      localStorage.setItem("creatorUser", email);
-      navigate("/creator-dashboard");
+      setError(data?.message || "Login failed");
     }
   };
 
@@ -197,10 +213,14 @@ export default function Login() {
             </div>
 
             <button type="submit"
-              className="w-full mt-2 py-3 rounded-xl text-sm font-semibold
-                bg-indigo-500 hover:bg-indigo-400 text-white transition-colors">
-              Sign In
+              disabled={loading}
+              className={`w-full mt-2 py-3 rounded-xl text-sm font-semibold text-white transition-colors
+                ${loading ? 'bg-indigo-400/70 cursor-wait' : 'bg-indigo-500 hover:bg-indigo-400'}`}>
+              {loading ? 'Signing in…' : 'Sign In'}
             </button>
+            {error && (
+              <div className="text-sm text-red-400 mt-2 mono">{error}</div>
+            )}
           </form>
 
           <p className="text-sm text-center mt-6 text-zinc-600">

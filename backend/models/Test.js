@@ -10,7 +10,12 @@ const QuestionSchema = new mongoose.Schema(
     },
     text:    { type: String, required: [true, "Question text is required"] },
     image:   { type: String, default: null }, // URL or base64
-    options: [{ type: String }],              // MCQ only
+    options: [
+  {
+    text:  { type: String, default: "" },
+    image: { type: String, default: null }, // Cloudinary URL or null
+  }
+],          // MCQ only
     correct: { type: String, required: true },// correct option text OR numerical answer
     marks:   { type: Number, default: 1 },
     negativeMark: { type: Number, default: 0 },
@@ -22,7 +27,8 @@ const QuestionSchema = new mongoose.Schema(
 const SectionSchema = new mongoose.Schema(
   {
     title:       { type: String, required: true },
-    duration:    { type: Number, default: 0 }, // seconds; 0 = no individual timer
+    duration:    { type: Number, default: 0 }, 
+    strictTimer: { type: Boolean, default: false },
     questions:   [QuestionSchema],
   },
   { _id: true }

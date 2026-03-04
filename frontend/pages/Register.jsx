@@ -6,6 +6,8 @@ import {
   Eye, EyeOff, CheckCircle2, User,
 } from "lucide-react";
 import Logo from "../components/Logo";
+import { authAPI } from "../utils/api";
+import { useAuth } from "../context/AuthContext";
 
 const FontLoader = () => (
   <style>{`
@@ -22,6 +24,7 @@ const FontLoader = () => (
 
 export default function Register() {
   const navigate = useNavigate();
+  const { login: saveAuth } = useAuth();
 
   const [mode, setMode]         = useState("student");
   const [name, setName]         = useState("");
@@ -29,15 +32,27 @@ export default function Register() {
   const [password, setPassword] = useState("");
   const [showPass, setShowPass] = useState(false);
 
-  const handleRegister = (e) => {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  const handleRegister = async (e) => {
     e.preventDefault();
-    const key   = mode === "student" ? "students" : "creators";
-    const users = JSON.parse(localStorage.getItem(key)) || [];
-    if (users.find(u => u.email === email)) { alert("Email already exists"); return; }
-    users.push({ name, email, password });
-    localStorage.setItem(key, JSON.stringify(users));
-    alert("Registered successfully!");
-    navigate("/");
+    setError(null);
+    setLoading(true);
+    const payload = { username: name, email, password, role: mode };
+    const { data, error: err } = await authAPI.register(payload);
+    setLoading(false);
+    if (err) {
+      setError(err);
+      return;
+    }
+    if (data?.success) {
+      saveAuth({ token: data.token, user: data.user });
+      const dest = data.user?.role === "creator" ? "/creator-dashboard" : "/student-dashboard";
+      navigate(dest);
+    } else {
+      setError(data?.message || "Registration failed");
+    }
   };
 
   return (
@@ -158,10 +173,14 @@ export default function Register() {
           <motion.button
             type="submit"
             whileTap={{ scale: .98 }}
-            className="w-full mt-2 py-3 rounded-xl text-sm font-semibold
-              bg-indigo-500 hover:bg-indigo-400 text-white transition-colors">
-            Register as {mode === "student" ? "Student" : "Creator"}
+            disabled={loading}
+            className={`w-full mt-2 py-3 rounded-xl text-sm font-semibold text-white transition-colors
+              ${loading ? 'bg-indigo-400/70 cursor-wait' : 'bg-indigo-500 hover:bg-indigo-400'}`}>
+            {loading ? 'Registering…' : `Register as ${mode === "student" ? "Student" : "Creator"}`}
           </motion.button>
+          {error && (
+            <div className="text-sm text-red-400 mt-2 mono">{error}</div>
+          )}
         </form>
 
         <p className="text-sm text-center mt-6 text-zinc-600">

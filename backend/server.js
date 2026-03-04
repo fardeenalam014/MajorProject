@@ -1,22 +1,46 @@
+/* ── Fix: Node.js v22+ on Windows doesn't use system DNS for SRV lookups ── */
+require("node:dns/promises").setDefaultResultOrder("ipv4first");
+require("node:dns/promises").setServers(["8.8.8.8", "1.1.1.1", "8.8.4.4"]);
+
 require("dotenv").config();
 const express      = require("express");
+const http         = require("http");
+const { Server }   = require("socket.io");
 const cors         = require("cors");
 const connectDB    = require("./config/db");
 const errorHandler = require("./middleware/errorHandler");
 
 /* ── Connect to MongoDB ── */
-// connectDB();
+connectDB();
 
-const app = express();
+const app    = express();
+const server = http.createServer(app);   // wrap express in http.Server for Socket.io
 
 /* ═══════════════════════════════════════
-   GLOBAL MIDDLEWARE
+   SOCKET.IO  — WebRTC signalling relay
+   Nothing stored in DB. Pure in-memory.
+═══════════════════════════════════════ */
+const io = new Server(server, {
+  cors: {
+    origin:      process.env.CLIENT_URL || "http://localhost:5173",
+    methods:     ["GET", "POST"],
+    credentials: true,
+  },
+  /* increase limits for WebRTC signalling payloads */
+  maxHttpBufferSize: 1e7,
+});
+
+/* Mount the signalling logic */
+require("./socket/liveSignal")(io);
+
+/* ═══════════════════════════════════════
+   EXPRESS MIDDLEWARE
 ═══════════════════════════════════════ */
 app.use(cors({
-  origin:      process.env.CLIENT_URL || "http://localhost:5000",
+  origin:      [process.env.CLIENT_URL || "http://localhost:5173", "http://localhost:5174"],
   credentials: true,
 }));
-app.use(express.json({ limit: "10mb" }));       // parse JSON bodies (10 mb for image payloads)
+app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 
 /* ═══════════════════════════════════════
@@ -28,20 +52,22 @@ app.get("/api/health", (req, res) => {
     message: "AIExamGuard API is running",
     env:     process.env.NODE_ENV,
     time:    new Date().toISOString(),
+    sockets: io.engine.clientsCount,
   });
 });
 
-// /* ═══════════════════════════════════════
-//    ROUTES
-// ═══════════════════════════════════════ */
+/* ═══════════════════════════════════════
+   REST ROUTES
+   Note: /api/live is REMOVED — live
+   monitoring is now handled by Socket.io
+═══════════════════════════════════════ */
 app.use("/api/auth",        require("./routes/authRoutes"));
 app.use("/api/tests",       require("./routes/testRoutes"));
 app.use("/api/enrollments", require("./routes/enrollmentRoutes"));
 app.use("/api/attempts",    require("./routes/attemptRoutes"));
-app.use("/api/live",        require("./routes/liveRoutes"));
 
 /* ═══════════════════════════════════════
-   404 — unmatched routes
+   404 handler
 ═══════════════════════════════════════ */
 app.use((req, res) => {
   res.status(404).json({ success: false, message: `Route ${req.originalUrl} not found` });
@@ -53,11 +79,12 @@ app.use((req, res) => {
 app.use(errorHandler);
 
 /* ═══════════════════════════════════════
-   START
-═══════════════════════════════════════ */
+   START — use server.listen not app.listen
+=══════════════════════════════════════ */
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`🚀  Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
+  console.log(`🔌  Socket.io ready for WebRTC signalling`);
 });
 
-module.exports = app;
+module.exports = { app, server, io };
