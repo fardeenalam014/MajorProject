@@ -1,3 +1,6 @@
+/**
+ * CreatorDashboard.jsx  —  src/pages/CreatorDashboard.jsx
+ */
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -89,7 +92,9 @@ function SlideOver({ children, onClose, title, subtitle, extra }) {
   );
 }
 
-
+/* ═══════════════════════════════════════
+   RESULTS PANEL
+═══════════════════════════════════════ */
 function ResultsPanel({ test, onClose }) {
   const [data,       setData]       = useState(null);
   const [enrollData, setEnrollData] = useState(null);
@@ -209,7 +214,9 @@ function ResultsPanel({ test, onClose }) {
   );
 }
 
-
+/* ═══════════════════════════════════════
+   ATTEMPTS PANEL
+═══════════════════════════════════════ */
 function AttemptsPanel({ test, onClose }) {
   const [data,    setData]    = useState(null);
   const [loading, setLoading] = useState(true);
@@ -354,7 +361,9 @@ function AttemptsPanel({ test, onClose }) {
   );
 }
 
-
+/* ═══════════════════════════════════════
+   MAIN
+═══════════════════════════════════════ */
 export default function CreatorDashboard() {
   const navigate         = useNavigate();
   const { user, logout } = useAuth();
@@ -405,10 +414,10 @@ export default function CreatorDashboard() {
   return (
     <div style={{ fontFamily: "'DM Sans', sans-serif" }}
       className="h-screen min-w-screen bg-zinc-950 text-zinc-100 flex overflow-hidden">
-      {}
+      {/* ^^^ h-screen + overflow-hidden on root — sidebar is now truly fixed height */}
       <FontLoader />
 
-      {}
+      {/* ── OVERLAYS ── */}
       <AnimatePresence>
         {panel?.type === "results"  && <ResultsPanel  test={panel.test} onClose={() => setPanel(null)} />}
         {panel?.type === "attempts" && <AttemptsPanel test={panel.test} onClose={() => setPanel(null)} />}
@@ -417,15 +426,15 @@ export default function CreatorDashboard() {
         <LiveMonitorPanel test={panel.test} onClose={() => setPanel(null)} />
       )}
 
-      {}
+      {/* ── SIDEBAR — fixed height, sign out always at bottom ── */}
       <aside className="hidden md:flex flex-col w-56 shrink-0 border-r border-zinc-800
         bg-zinc-950 h-full">
-        {}
+        {/* logo — fixed top */}
         <div className="px-5 py-4 border-b border-zinc-800 shrink-0">
           <Logo size="sm" />
         </div>
 
-        {}
+        {/* user info — fixed below logo */}
         <div className="px-4 py-4 border-b border-zinc-800 shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-indigo-500/20 border border-indigo-500/30
@@ -439,7 +448,7 @@ export default function CreatorDashboard() {
           </div>
         </div>
 
-        {}
+        {/* new test button — fixed below user */}
         <div className="px-4 pt-4 shrink-0">
           <button onClick={() => navigate("/create-test")}
             className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm
@@ -448,10 +457,10 @@ export default function CreatorDashboard() {
           </button>
         </div>
 
-        {}
+        {/* spacer — takes remaining space */}
         <div className="flex-1 min-h-0" />
 
-        {}
+        {/* sign out — always pinned to bottom */}
         <div className="px-4 pb-5 shrink-0 border-t border-zinc-800">
           <button onClick={handleLogout}
             className="w-full flex items-center gap-2 px-3 py-2 mt-3 rounded-lg text-sm
@@ -461,10 +470,10 @@ export default function CreatorDashboard() {
         </div>
       </aside>
 
-      {}
+      {/* ── MAIN — scrolls independently of sidebar ── */}
       <main className="flex-1 flex flex-col min-h-0 overflow-hidden">
 
-        {}
+        {/* topbar */}
         <div className="h-14 shrink-0 flex items-center justify-between px-6
           bg-zinc-950/95 border-b border-zinc-800 backdrop-blur-sm">
           <div>
@@ -478,7 +487,7 @@ export default function CreatorDashboard() {
           </button>
         </div>
 
-        {}
+        {/* scrollable content */}
         <div className="flex-1 overflow-y-auto p-6 space-y-6"
           style={{ scrollbarWidth: "thin", scrollbarColor: "#3f3f46 transparent" }}>
           <div className="max-w-5xl mx-auto space-y-6">
@@ -522,7 +531,7 @@ export default function CreatorDashboard() {
                         className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5
                           cursor-pointer hover:border-zinc-700 transition-colors flex flex-col"
                       >
-                        {}
+                        {/* header */}
                         <div className="flex items-start justify-between gap-2 mb-3">
                           <h2 className="font-semibold text-sm text-zinc-200 leading-snug line-clamp-2">
                             {t.title}
@@ -536,7 +545,7 @@ export default function CreatorDashboard() {
                           </span>
                         </div>
 
-                        {}
+                        {/* meta */}
                         <div className="flex items-center gap-3 mb-3 flex-wrap">
                           <span className="flex items-center gap-1.5 mono text-[10px] text-zinc-500">
                             <Clock size={10} />{t.duration ?? "—"} min
@@ -560,7 +569,7 @@ export default function CreatorDashboard() {
                           )}
                         </div>
 
-                        {}
+                        {/* panel buttons */}
                         <div className="grid grid-cols-3 gap-1.5 mb-3"
                           onClick={e => e.stopPropagation()}>
                           <button onClick={() => setPanel({ type: "results", test: t })}
@@ -586,7 +595,7 @@ export default function CreatorDashboard() {
                           </button>
                         </div>
 
-                        {}
+                        {/* actions */}
                         <div className="flex gap-2 mt-auto" onClick={e => e.stopPropagation()}>
                           <button onClick={() => copyCode(t.testCode)}
                             className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs

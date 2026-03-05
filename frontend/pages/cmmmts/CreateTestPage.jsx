@@ -1,3 +1,7 @@
+/**
+ * TestCreator.jsx
+ * Place at: src/pages/TestCreator.jsx
+ */
 import { uploadToCloudinary } from "../utils/uploadImage";
 import { useState, useRef, useMemo, useEffect, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
@@ -130,7 +134,9 @@ export default function CreateTestPage() {
     setTimeout(() => setToast(null), 3500);
   };
 
-  
+  /* ════════════════════════════════════════
+     LOAD TEST IN EDIT MODE
+  ════════════════════════════════════════ */
   useEffect(() => {
     if (!testId) {
       setActiveSectionId(sections[0]?.id ?? null);
@@ -150,10 +156,12 @@ export default function CreateTestPage() {
       setActiveSectionId(parsed.sections[0]?.id ?? null);
       setPageLoading(false);
     });
-
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [testId]);
 
-  
+  /* ════════════════════════════════════════
+     SECTION HELPERS
+  ════════════════════════════════════════ */
   const addSection = () => {
     const id = Date.now();
     setSections(prev => [
@@ -173,7 +181,9 @@ export default function CreateTestPage() {
     setActiveSectionId(remaining[0].id);
   };
 
-  
+  /* ════════════════════════════════════════
+     QUESTION HELPERS
+  ════════════════════════════════════════ */
   const addQuestion = () =>
     setSections(prev => prev.map(s => s.id === activeSectionId ? {
       ...s,
@@ -237,7 +247,9 @@ export default function CreateTestPage() {
   const scrollToQuestion = (qid) =>
     questionRefs.current[qid]?.scrollIntoView({ behavior: "smooth", block: "center" });
 
-  
+  /* ════════════════════════════════════════
+     SAVE
+  ════════════════════════════════════════ */
   const saveTest = useCallback(async () => {
     if (!title.trim()) { showToast("error", "Please add a title"); return; }
     if (sections.every(s => s.questions.length === 0)) {
@@ -273,7 +285,7 @@ export default function CreateTestPage() {
       className="h-screen min-w-screen bg-zinc-950 text-zinc-100 flex flex-col overflow-hidden">
       <FontLoader />
 
-      {}
+      {/* ── TOAST ── */}
       <AnimatePresence>
         {toast && (
           <motion.div
@@ -294,7 +306,7 @@ export default function CreateTestPage() {
         )}
       </AnimatePresence>
 
-      {}
+      {/* ── TOPBAR ── */}
       <header className="h-14 shrink-0 flex items-center justify-between px-5
         bg-zinc-950 border-b border-zinc-800">
         <div className="flex items-center gap-4">
@@ -333,10 +345,10 @@ export default function CreateTestPage() {
         </div>
       </header>
 
-      {}
+      {/* ── BODY ── */}
       <div className="flex flex-1 min-h-0">
 
-        {}
+        {/* ══ LEFT: sections panel ══ */}
         <aside className="w-52 shrink-0 flex-col border-r border-zinc-800 bg-zinc-950
           overflow-y-auto hidden md:flex"
           style={{ scrollbarWidth: "thin", scrollbarColor: "#3f3f46 transparent" }}>
@@ -362,7 +374,7 @@ export default function CreateTestPage() {
                       ? "bg-indigo-500/10 border-indigo-500/30"
                       : "bg-zinc-900 border-zinc-800 hover:border-zinc-700"}`}
                 >
-                  {}
+                  {/* section name */}
                   <input
                     value={s.name}
                     onClick={e => e.stopPropagation()}
@@ -371,7 +383,7 @@ export default function CreateTestPage() {
                       ${isActive ? "text-indigo-300" : "text-zinc-300"}`}
                   />
 
-                  {}
+                  {/* timed on/off toggle */}
                   <div className="flex items-center gap-2 mb-2"
                     onClick={e => e.stopPropagation()}>
                     <button
@@ -392,11 +404,11 @@ export default function CreateTestPage() {
                     </span>
                   </div>
 
-                  {}
+                  {/* time input + strict toggle — only when timed */}
                   {isTimed && (
                     <div className="space-y-2 mb-2" onClick={e => e.stopPropagation()}>
 
-                      {}
+                      {/* minutes input */}
                       <div className="flex items-center gap-1 mono text-[10px] text-zinc-500">
                         <Clock size={9} />
                         <input
@@ -409,7 +421,7 @@ export default function CreateTestPage() {
                         <span>min</span>
                       </div>
 
-                      {}
+                      {/* strict timer toggle */}
                       <div
                         className="flex items-center gap-2 cursor-pointer"
                         onClick={() => updateSection(s.id, "strictTimer", !s.strictTimer)}
@@ -426,7 +438,7 @@ export default function CreateTestPage() {
                         </span>
                       </div>
 
-                      {}
+                      {/* warning when strict is on */}
                       {s.strictTimer && (
                         <p className="mono text-[9px] text-amber-500/70 leading-relaxed">
                           Students can't go back after moving forward.
@@ -435,7 +447,7 @@ export default function CreateTestPage() {
                     </div>
                   )}
 
-                  {}
+                  {/* bottom row */}
                   <div className="flex items-center justify-between mt-1">
                     <div className="flex items-center gap-2">
                       <span className="mono text-[9px] text-zinc-600">
@@ -470,11 +482,11 @@ export default function CreateTestPage() {
           </div>
         </aside>
 
-        {}
+        {/* ══ CENTER: questions ══ */}
         <main className="flex-1 overflow-y-auto p-5 space-y-4"
           style={{ scrollbarWidth: "thin", scrollbarColor: "#3f3f46 transparent" }}>
 
-          {}
+          {/* mobile section selector */}
           <div className="flex gap-2 overflow-x-auto pb-1 md:hidden">
             {sections.map(s => (
               <button key={s.id} onClick={() => setActiveSectionId(s.id)}
@@ -492,7 +504,7 @@ export default function CreateTestPage() {
             </button>
           </div>
 
-          {}
+          {/* section heading */}
           <div className="flex items-center justify-between">
             <div>
               <h2 className="font-semibold text-zinc-200">{activeSection?.name}</h2>
@@ -512,7 +524,7 @@ export default function CreateTestPage() {
             </button>
           </div>
 
-          {}
+          {/* empty state */}
           {activeSection?.questions.length === 0 && (
             <div className="flex flex-col items-center justify-center py-20 gap-3 text-center">
               <div className="w-12 h-12 rounded-2xl bg-zinc-900 border border-zinc-800
@@ -528,7 +540,7 @@ export default function CreateTestPage() {
             </div>
           )}
 
-          {}
+          {/* question cards */}
           <AnimatePresence>
             {activeSection?.questions.map((q, index) => (
               <motion.div key={q.id}
@@ -540,7 +552,7 @@ export default function CreateTestPage() {
                 className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 space-y-4
                   hover:border-zinc-700 transition-colors"
               >
-                {}
+                {/* card header */}
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2.5">
                     <span className="mono text-[10px] text-zinc-500 uppercase tracking-widest">
@@ -585,7 +597,7 @@ export default function CreateTestPage() {
                   </div>
                 </div>
 
-                {}
+                {/* question text */}
                 <textarea
                   placeholder="Type your question here…"
                   value={q.text}
@@ -596,13 +608,28 @@ export default function CreateTestPage() {
                     focus:border-zinc-600 transition-colors leading-relaxed"
                 />
 
-                {}
+                {/* question image */}
                 <div className="flex items-center gap-3">
                   <label className="flex items-center gap-1.5 mono text-[10px] text-zinc-500
                     hover:text-zinc-300 cursor-pointer transition-colors">
                     <ImageIcon size={12} />
                     {q.image ? "Change image" : "Add image"}
-                    <input hidden type="file" accept="image}
+                    <input hidden type="file" accept="image/*"
+                      onChange={e => handleQuestionImage(q.id, e.target.files[0])} />
+                  </label>
+                  {q.image && (
+                    <button onClick={() => updateQuestion(q.id, "image", null)}
+                      className="mono text-[10px] text-rose-500 hover:text-rose-400 transition-colors">
+                      Remove
+                    </button>
+                  )}
+                </div>
+                {q.image && (
+                  <img src={q.image} alt="question"
+                    className="h-32 rounded-xl object-cover border border-zinc-800" />
+                )}
+
+                {/* MCQ options */}
                 {q.type === "mcq" && (
                   <div className="space-y-2.5">
                     {q.options.map((o, i) => {
@@ -636,7 +663,31 @@ export default function CreateTestPage() {
                           <label className="text-zinc-600 hover:text-zinc-400
                             cursor-pointer transition-colors shrink-0">
                             <ImageIcon size={12} />
-                            <input hidden type="file" accept="image}
+                            <input hidden type="file" accept="image/*"
+                              onChange={e => handleOptionImage(q.id, o.id, e.target.files[0])} />
+                          </label>
+                          {o.image && (
+                            <img src={o.image} alt="option"
+                              className="h-8 w-12 rounded object-cover border border-zinc-700 shrink-0" />
+                          )}
+                          {q.options.length > 2 && (
+                            <button onClick={() => removeOption(q.id, o.id)}
+                              className="text-zinc-700 hover:text-red-400 transition-colors shrink-0">
+                              <Trash2 size={11} />
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
+                    <button onClick={() => addOption(q.id)}
+                      className="flex items-center gap-1.5 mono text-[10px] text-zinc-500
+                        hover:text-indigo-400 transition-colors mt-1">
+                      <Plus size={11} /> Add option
+                    </button>
+                  </div>
+                )}
+
+                {/* Numerical answer */}
                 {q.type === "numerical" && (
                   <div className="flex flex-col gap-1.5 max-w-xs">
                     <label className="mono text-[10px] text-zinc-500 uppercase tracking-widest">
@@ -668,7 +719,7 @@ export default function CreateTestPage() {
           )}
         </main>
 
-        {}
+        {/* ══ RIGHT: question jump nav ══ */}
         <aside className="w-16 shrink-0 border-l border-zinc-800 bg-zinc-950 flex-col
           overflow-y-auto hidden sm:flex"
           style={{ scrollbarWidth: "thin", scrollbarColor: "#3f3f46 transparent" }}>

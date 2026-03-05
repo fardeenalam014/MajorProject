@@ -23,7 +23,7 @@ export default function FaceTracker({ videoRef, onDetect }) {
       minTrackingConfidence: 0.5
     });
 
-    // 🔥 detection logic
+    
     faceMesh.onResults(results => {
       const faces = results.multiFaceLandmarks || [];
       const now = Date.now();
@@ -33,7 +33,7 @@ export default function FaceTracker({ videoRef, onDetect }) {
       if (faces.length === 0) state = "MISSING";
       else if (faces.length > 1) state = "MULTIPLE";
 
-      // only alert if state changed + cooldown passed
+      
       if (
         state !== "OK" &&
         state !== lastState.current &&
@@ -58,7 +58,7 @@ export default function FaceTracker({ videoRef, onDetect }) {
 
     camera.start();
 
-    // ✅ cleanup (VERY IMPORTANT)
+    
     return () => {
       camera.stop();
       faceMesh.close();

@@ -22,7 +22,7 @@ const AttemptSchema = new mongoose.Schema(
     totalMarks: { type: Number, default: 0 },
     percentage: { type: Number, default: 0 },
     passed:     { type: Boolean, default: false },
-    timeTaken:  { type: Number, default: 0 }, // seconds
+    timeTaken:  { type: Number, default: 0 },
 
     /* Proctoring violation counters */
     violations: {

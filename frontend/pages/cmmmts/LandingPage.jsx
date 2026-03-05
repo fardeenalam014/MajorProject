@@ -9,7 +9,7 @@ import {
 import Logo from "../components/Logo";
 import "./LandingPage.css";
 
-
+/* ─── Fade-up animation wrapper ─── */
 const FU = ({ children, delay = 0, className = "" }) => (
   <motion.div
     initial={{ opacity: 0, y: 28 }}
@@ -22,7 +22,7 @@ const FU = ({ children, delay = 0, className = "" }) => (
   </motion.div>
 );
 
-
+/* ─── Floating proctoring badge ─── */
 const ProctoringBadge = ({ icon: Icon, label, value, color, style }) => (
   <div className="proctoring-badge" style={style}>
     <Icon size={13} style={{ color }} />
@@ -33,7 +33,7 @@ const ProctoringBadge = ({ icon: Icon, label, value, color, style }) => (
   </div>
 );
 
-
+/* ─── Data ─── */
 const FEATURES = [
   { icon: ScanFace,          color: "#6366f1", title: "Face Tracking",   desc: "Continuous face detection flags absence or multiple people in real time." },
   { icon: MonitorSmartphone, color: "#10b981", title: "Device Detection", desc: "On-device AI spots phones, books and prohibited items without cloud upload." },
@@ -70,14 +70,16 @@ const CREATOR_CHECKLIST = [
   "Publish, draft, edit and delete anytime",
 ];
 
-
+/* ══════════════════════════════════════════════
+   LANDING PAGE
+══════════════════════════════════════════════ */
 export default function LandingPage() {
   const navigate = useNavigate();
 
   return (
     <div style={{ background: "#050507", width: "100%", maxWidth: "100vw", overflowX: "hidden" }}>
 
-      {}
+      {/* ── NAV ── */}
       <motion.nav
         className="nav"
         initial={{ y: -20, opacity: 0 }}
@@ -93,12 +95,12 @@ export default function LandingPage() {
         </div>
       </motion.nav>
 
-      {}
+      {/* ── HERO ── */}
       <section className="hero">
         <div className="grid-bg" style={{ position: "absolute", inset: 0, opacity: 0.4 }} />
         <div className="hero-glow breathe" />
 
-        {}
+        {/* Eyebrow */}
         <motion.div
           className="hero-eyebrow"
           initial={{ opacity: 0, scale: 0.9 }}
@@ -109,7 +111,7 @@ export default function LandingPage() {
           <span className="mono">AI-Powered Proctoring Platform</span>
         </motion.div>
 
-        {}
+        {/* Headline */}
         <motion.h1
           className="hero-title bebas"
           initial={{ opacity: 0, y: 40 }}
@@ -149,7 +151,7 @@ export default function LandingPage() {
           <button className="btn-ghost" onClick={() => navigate("/login")}>Sign in</button>
         </motion.div>
 
-        {}
+        {/* Hero image */}
         <motion.div
           className="hero-image-wrap float-img"
           initial={{ opacity: 0, y: 60 }}
@@ -173,7 +175,7 @@ export default function LandingPage() {
         </motion.div>
       </section>
 
-      {}
+      {/* ── TICKER ── */}
       <div className="ticker-strip">
         <div className="ticker-track ticker">
           {[...TICKER_WORDS, ...TICKER_WORDS].map((w, i) => (
@@ -182,7 +184,7 @@ export default function LandingPage() {
         </div>
       </div>
 
-      {}
+      {/* ── STUDENT SPLIT ── */}
       <section className="section-split">
         <div className="split-grid">
           <FU>
@@ -236,7 +238,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {}
+      {/* ── CREATOR SPLIT ── */}
       <section className="section-split" style={{ paddingTop: 0 }}>
         <div className="split-grid reversed">
           <FU delay={0.15}>
@@ -291,7 +293,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {}
+      {/* ── FEATURES ── */}
       <section className="section-features">
         <div className="section-features-inner">
           <FU>
@@ -319,7 +321,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {}
+      {/* ── HOW IT WORKS ── */}
       <section className="section-how">
         <FU>
           <div style={{ marginBottom: 60 }}>
@@ -340,7 +342,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {}
+      {/* ── IMAGE STRIP ── */}
       <FU>
         <div className="image-strip">
           <img
@@ -355,7 +357,7 @@ export default function LandingPage() {
         </div>
       </FU>
 
-      {}
+      {/* ── CTA ── */}
       <section className="section-cta">
         <FU>
           <div className="cta-box">
@@ -382,7 +384,7 @@ export default function LandingPage() {
         </FU>
       </section>
 
-      {}
+      {/* ── FOOTER ── */}
       <footer className="footer">
         <Logo size="sm" />
         <span className="footer-copy">© 2025 AIExamGuard · AI-Powered · Secure · Fair</span>

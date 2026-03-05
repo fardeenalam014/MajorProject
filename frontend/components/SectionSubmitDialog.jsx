@@ -1,23 +1,9 @@
-/* ─────────────────────────────────────────────────────────────
-   Add these to ExamPage.jsx
-   ───────────────────────────────────────────────────────────── */
-
-/* ── 1. Add Lock to lucide imports ── */
-// Change:
-import {
-  ChevronLeft, ChevronRight, Clock, Camera,
-  Monitor, ShieldAlert, CheckCircle2, Loader2,
-  Send, AlertTriangle,
-} from "lucide-react";
-// To:
 import {
   ChevronLeft, ChevronRight, Clock, Camera,
   Monitor, ShieldAlert, CheckCircle2, Loader2,
   Send, AlertTriangle, Lock as LockIcon,
 } from "lucide-react";
 
-/* ── 2. SectionSubmitDialog component ── */
-// Add this BEFORE the ExamPage component (after SubmitDialog)
 
 function SectionSubmitDialog({
   sectionName, answeredInSection, totalInSection,

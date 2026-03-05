@@ -23,7 +23,7 @@ const UserSchema = new mongoose.Schema(
       type:      String,
       required:  [true, "Password is required"],
       minlength: [6, "Password must be at least 6 characters"],
-      select:    false, // never return password in queries
+      select:    false, 
     },
     role: {
       type:    String,
@@ -34,7 +34,7 @@ const UserSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-/* ── Hash password before save ── */
+
 UserSchema.pre("save", async function (next) {
   if (!this.isModified("password")) return next();
   const salt = await bcrypt.genSalt(10);
@@ -42,7 +42,7 @@ UserSchema.pre("save", async function (next) {
   next();
 });
 
-/* ── Instance method: compare password ── */
+
 UserSchema.methods.matchPassword = async function (entered) {
   return bcrypt.compare(entered, this.password);
 };

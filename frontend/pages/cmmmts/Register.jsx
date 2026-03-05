@@ -60,7 +60,7 @@ export default function Register() {
       className="min-h-screen min-w-screen bg-zinc-950 text-zinc-100 flex flex-col items-center justify-center p-4 gap-6">
       <FontLoader />
 
-      {}
+      {/* grid bg */}
       <div className="pointer-events-none fixed inset-0"
         style={{
           backgroundImage:
@@ -70,12 +70,12 @@ export default function Register() {
         }}
       />
 
-      {}
+      {/* logo — outside the box */}
       <div className="relative fade-up">
         <Logo size="md" />
       </div>
 
-      {}
+      {/* card */}
       <div className="relative w-full max-w-md bg-zinc-900 border border-zinc-800
         rounded-2xl shadow-2xl shadow-black/50 p-8 fade-up"
         style={{ animationDelay: ".08s" }}>
@@ -85,7 +85,7 @@ export default function Register() {
           <p className="text-sm text-zinc-500 mt-1">Join AIExamGuard today</p>
         </div>
 
-        {}
+        {/* role selector */}
         <div className="grid grid-cols-2 gap-3 mb-5">
           {[
             { key: "student", label: "Student",      icon: GraduationCap, desc: "Attempt AI-proctored exams" },
@@ -111,7 +111,7 @@ export default function Register() {
           ))}
         </div>
 
-        {}
+        {/* form */}
         <form onSubmit={handleRegister} className="flex flex-col gap-3">
 
           <div className="flex flex-col gap-1.5">

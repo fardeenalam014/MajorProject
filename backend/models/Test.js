@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 
-/* ── Question sub-schema ── */
+
 const QuestionSchema = new mongoose.Schema(
   {
     type: {
@@ -9,21 +9,21 @@ const QuestionSchema = new mongoose.Schema(
       default: "mcq",
     },
     text:    { type: String, required: [true, "Question text is required"] },
-    image:   { type: String, default: null }, // URL or base64
+    image:   { type: String, default: null }, 
     options: [
   {
     text:  { type: String, default: "" },
-    image: { type: String, default: null }, // Cloudinary URL or null
+    image: { type: String, default: null }, 
   }
-],          // MCQ only
-    correct: { type: String, required: true },// correct option text OR numerical answer
+],         
+    correct: { type: String, required: true },
     marks:   { type: Number, default: 1 },
     negativeMark: { type: Number, default: 0 },
   },
   { _id: true }
 );
 
-/* ── Section sub-schema ── */
+
 const SectionSchema = new mongoose.Schema(
   {
     title:       { type: String, required: true },
@@ -34,7 +34,7 @@ const SectionSchema = new mongoose.Schema(
   { _id: true }
 );
 
-/* ── Test schema ── */
+
 const TestSchema = new mongoose.Schema(
   {
     title: {
@@ -48,10 +48,10 @@ const TestSchema = new mongoose.Schema(
       ref:      "User",
       required: true,
     },
-    duration:   { type: Number, default: 60 }, // total minutes
+    duration:   { type: Number, default: 60 }, 
     sections:   [SectionSchema],
     published:  { type: Boolean, default: false },
-    /* short shareable code students enter */
+   
     testCode:   {
       type:   String,
       unique: true,
@@ -68,7 +68,7 @@ const TestSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-/* ── Auto-generate a short test code on creation ── */
+
 TestSchema.pre("save", async function (next) {
   if (this.isNew && !this.testCode) {
     // 8-char uppercase alphanumeric
@@ -77,7 +77,7 @@ TestSchema.pre("save", async function (next) {
   next();
 });
 
-/* ── Virtual: total marks ── */
+
 TestSchema.virtual("totalMarks").get(function () {
   return this.sections.reduce(
     (sum, sec) => sum + sec.questions.reduce((q, qu) => q + (qu.marks || 1), 0),

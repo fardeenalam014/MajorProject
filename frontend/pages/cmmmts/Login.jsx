@@ -60,14 +60,14 @@ export default function Login() {
       setError(err);
       return;
     }
-
+    // data contains { success, token, user }
     if (data?.success) {
-
+      // Ensure the role returned by the server matches the selected role on the form
       if (data.user?.role !== role) {
         setError("Invalid credentials ");
         return;
       }
-
+      // persist auth and go to the appropriate dashboard for the selected role
       saveAuth({ token: data.token, user: data.user });
       const dest = role === 'creator' ? '/creator-dashboard' : '/student-dashboard';
       navigate(dest);
@@ -81,7 +81,7 @@ export default function Login() {
       className="min-h-screen min-w-screen bg-zinc-950 text-zinc-100 flex items-center justify-center p-4">
       <FontLoader />
 
-      {}
+      {/* subtle grid bg */}
       <div className="pointer-events-none fixed inset-0"
         style={{
           backgroundImage:
@@ -94,14 +94,14 @@ export default function Login() {
       <div className="relative w-full max-w-4xl grid md:grid-cols-2 rounded-2xl overflow-hidden
         border border-zinc-800 bg-zinc-900 shadow-2xl shadow-black/50 fade-up">
 
-        {}
+        {/* ── LEFT: info panel ── */}
         <div className="hidden md:flex flex-col justify-between p-10
           bg-zinc-950 border-r border-zinc-800">
 
-          {}
+          {/* Logo */}
           <Logo size="md" />
 
-          {}
+          {/* headline */}
           <div className="my-8">
             <motion.div
               key={role}
@@ -129,16 +129,16 @@ export default function Login() {
             </motion.div>
           </div>
 
-          {}
+          {/* footer note */}
           <p className="mono text-[10px] text-zinc-700 tracking-widest">
             AI-POWERED · SECURE · FAIR
           </p>
         </div>
 
-        {}
+        {/* ── RIGHT: form ── */}
         <div className="flex flex-col p-8 sm:p-10">
 
-          {}
+          {/* mobile logo */}
           <div className="mb-8 md:hidden">
             <Logo size="sm" />
           </div>
@@ -148,7 +148,7 @@ export default function Login() {
             <p className="text-sm text-zinc-500 mt-1">Sign in to your account</p>
           </div>
 
-          {}
+          {/* role selector */}
           <div className="flex gap-2 mb-7">
             {[
               { key: "student", label: "Student", icon: GraduationCap },
@@ -167,7 +167,7 @@ export default function Login() {
             ))}
           </div>
 
-          {}
+          {/* form */}
           <form onSubmit={handleLogin} className="flex flex-col gap-3 flex-1">
 
             <div className="flex flex-col gap-1.5">

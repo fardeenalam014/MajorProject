@@ -22,7 +22,7 @@ export default function ObjectDetector({ videoRef, onDetect }) {
 
       running.current = true;
 
-      // 🔥 resize for speed
+    
       const canvas = document.createElement("canvas");
       canvas.width = 320;
       canvas.height = 240;
@@ -54,12 +54,12 @@ export default function ObjectDetector({ videoRef, onDetect }) {
 
       running.current = false;
 
-      // 🔥 slower frequency (important)
-      setTimeout(detectLoop, 500); // every 2.5s
+      
+      setTimeout(detectLoop, 500); 
     };
 
     const load = async () => {
-      model = await cocoSsd.load({ base: "lite_mobilenet_v2" }); // lighter model
+      model = await cocoSsd.load({ base: "lite_mobilenet_v2" }); 
       detectLoop();
     };
 

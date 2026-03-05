@@ -1,3 +1,8 @@
+/**
+ * ExamPage.jsx — src/pages/ExamPage.jsx
+ * Live streaming (WebRTC + socket) REMOVED.
+ * Camera is local preview only. Violations still tracked and submitted with attempt.
+ */
 import { useRef, useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate, useParams }  from "react-router-dom";
 import { motion, AnimatePresence }  from "framer-motion";
@@ -247,7 +252,7 @@ export default function ExamPage() {
   const navigate        = useNavigate();
   const { user }        = useAuth();
 
-
+  // ── refs ──
   const cameraVideoRef  = useRef(null);
   const cameraStreamRef = useRef(null);   // local only, no streaming
   const startTimeRef    = useRef(null);
@@ -260,7 +265,7 @@ export default function ExamPage() {
   const devRef  = useRef(0);
   const escRef  = useRef(0);
 
-
+  // ── state ──
   const [testData,          setTestData]          = useState(null);
   const [loading,           setLoading]           = useState(true);
   const [started,           setStarted]           = useState(false);
@@ -287,7 +292,7 @@ export default function ExamPage() {
   const totalQuestions = useMemo(() => sections.reduce((a, s) => a + s.questions.length, 0), [sections]);
   const answeredCount  = useMemo(() => Object.values(answers).filter(v => v !== "" && v != null).length, [answers]);
 
-
+  // ── load test ──
   useEffect(() => {
     if (!user) { navigate("/login"); return; }
     testAPI.getTest(testId).then(({ data, error }) => {
@@ -300,7 +305,7 @@ export default function ExamPage() {
     });
   }, [testId, user, navigate]);
 
-
+  // ── finish exam ──
   const finishExam = useCallback(async (autoSubmit = false) => {
     if (finishCalledRef.current) return;
     finishCalledRef.current = true;
@@ -321,7 +326,7 @@ export default function ExamPage() {
     else { navigate("/student-dashboard"); }
   }, [testId, navigate]);
 
-
+  // ── advance section (strict-aware) ──
   const advanceSection = useCallback((fromIdx, lockIt = false) => {
     const newLocked = lockIt
       ? new Set([...lockedSections, fromIdx])
@@ -351,7 +356,7 @@ export default function ExamPage() {
     setShowSectionSubmit(false);
   }, [sections, lockedSections]);
 
-
+  // ── total timer ──
   useEffect(() => {
     if (!started) return;
     totalTimerRef.current = setInterval(() => {
@@ -363,7 +368,7 @@ export default function ExamPage() {
     return () => clearInterval(totalTimerRef.current);
   }, [started, finishExam]);
 
-
+  // ── section timer ──
   useEffect(() => {
     if (!started) return;
     clearInterval(sectionTimerRef.current);
@@ -383,7 +388,7 @@ export default function ExamPage() {
     return () => clearInterval(sectionTimerRef.current);
   }, [started, activeSectionIdx, sections, advanceSection]);
 
-
+  // ── answer handler ──
   const handleAnswer = useCallback((key, value) => {
     setAnswers(prev => {
       const next = { ...prev, [key]: value };
@@ -392,7 +397,7 @@ export default function ExamPage() {
     });
   }, []);
 
-
+  // ── violation handler (local only, no socket emit) ──
   const handleDetect = useCallback((msg) => {
     setWarning(msg);
     setWarningCount(c => c + 1);
@@ -404,7 +409,7 @@ export default function ExamPage() {
     else if (m.includes("fullscreen") || m.includes("esc"))                         { escRef.current++;  setEscCount(escRef.current);   }
   }, []);
 
-
+  // ── start exam (camera preview only, no WebRTC/socket) ──
   const startExam = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
@@ -416,7 +421,7 @@ export default function ExamPage() {
     } catch (err) { console.error("Start error:", err); setCameraBlocked(true); }
   };
 
-
+  // ── fullscreen guard ──
   useEffect(() => {
     const handle = async () => {
       if (!started) return;
@@ -431,21 +436,21 @@ export default function ExamPage() {
     return () => document.removeEventListener("fullscreenchange", handle);
   }, [started, handleDetect]);
 
-
+  // ── tab switch guard ──
   useEffect(() => {
     const h = () => { if (document.hidden && started) handleDetect("⚠️ Tab switched!"); };
     document.addEventListener("visibilitychange", h);
     return () => document.removeEventListener("visibilitychange", h);
   }, [started, handleDetect]);
 
-
+  // ── block right-click ──
   useEffect(() => {
     const b = e => e.preventDefault();
     window.addEventListener("contextmenu", b);
     return () => window.removeEventListener("contextmenu", b);
   }, []);
 
-
+  // ── beforeunload beacon ──
   useEffect(() => {
     const h = () => {
       if (!started) return;
@@ -460,7 +465,7 @@ export default function ExamPage() {
     return () => window.removeEventListener("beforeunload", h);
   }, [started, testId]);
 
-
+  // ── cleanup ──
   useEffect(() => () => {
     cameraStreamRef.current?.getTracks().forEach(t => t.stop());
     clearInterval(totalTimerRef.current);
@@ -498,7 +503,7 @@ export default function ExamPage() {
       className="h-screen w-screen bg-zinc-950 text-zinc-100 flex flex-col overflow-hidden select-none">
       <FontLoader />
 
-      {}
+      {/* HEADER */}
       <header className="h-14 shrink-0 flex items-center justify-between px-5 bg-zinc-950 border-b border-zinc-800">
         <div className="flex items-center gap-4 min-w-0">
           <div className="min-w-0">
@@ -547,10 +552,10 @@ export default function ExamPage() {
         </div>
       </header>
 
-      {}
+      {/* BODY */}
       <div className="flex flex-1 min-h-0">
 
-        {}
+        {/* LEFT: camera (local preview) + stats */}
         <aside className="w-56 shrink-0 flex-col border-r border-zinc-800 bg-zinc-950 hidden md:flex overflow-y-auto"
           style={{ scrollbarWidth: "thin", scrollbarColor: "#3f3f46 transparent" }}>
           <div className="relative bg-black aspect-video shrink-0 overflow-hidden">
@@ -627,10 +632,10 @@ export default function ExamPage() {
           )}
         </aside>
 
-        {}
+        {/* CENTER: questions */}
         <main className="flex-1 flex flex-col min-w-0">
 
-          {}
+          {/* section tabs */}
           {sections.length > 1 && (
             <div
               className="shrink-0 flex items-center gap-2 px-4 py-3 border-b border-zinc-800 bg-zinc-950"
@@ -670,7 +675,7 @@ export default function ExamPage() {
             </div>
           )}
 
-          {}
+          {/* section info + nav */}
           {activeSection && started && (
             <>
               <div className="shrink-0 flex items-center justify-between px-5 py-3 border-b border-zinc-800">
@@ -713,7 +718,7 @@ export default function ExamPage() {
             </>
           )}
 
-          {}
+          {/* questions scroll */}
           <div className="flex-1 overflow-y-auto p-5 space-y-4" style={{ scrollbarWidth: "thin", scrollbarColor: "#3f3f46 transparent" }}>
             {!started ? (
               <div className="flex flex-col items-center justify-center h-full gap-4 text-center">
@@ -753,7 +758,7 @@ export default function ExamPage() {
           </div>
         </main>
 
-        {}
+        {/* RIGHT: question palette */}
         {started && (
           <aside className="w-16 shrink-0 border-l border-zinc-800 bg-zinc-950 flex-col hidden sm:flex overflow-y-auto"
             style={{ scrollbarWidth: "thin", scrollbarColor: "#3f3f46 transparent" }}>
@@ -809,7 +814,7 @@ export default function ExamPage() {
         )}
       </div>
 
-      {}
+      {/* OVERLAYS */}
       <AnimatePresence>
         {showSubmit && (
           <SubmitDialog answered={answeredCount} total={totalQuestions} submitting={submitting}

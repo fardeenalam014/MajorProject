@@ -22,7 +22,7 @@ const EnrollmentSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-/* One student can only enroll in a test once */
+
 EnrollmentSchema.index({ test: 1, student: 1 }, { unique: true });
 
 module.exports = mongoose.model("Enrollment", EnrollmentSchema);
