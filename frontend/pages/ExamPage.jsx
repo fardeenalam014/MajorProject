@@ -6,14 +6,24 @@ import {
   ShieldAlert, CheckCircle2, Loader2,
   Send, AlertTriangle, Hash, Lock as LockIcon,
 } from "lucide-react";
+import { io } from "socket.io-client";
 import FaceTracker    from "../components/FaceTracker";
 import ObjectDetector from "../components/ObjectDetector";
+import FaceVerifier   from "../components/FaceVerifier";
 import { useAuth }    from "../context/AuthContext";
 import { testAPI, attemptAPI } from "../utils/api";
 
 const SOCKET_URL = import.meta.env.VITE_API_URL?.replace("/api", "") || "http://localhost:5000";
 const MAX_ESCAPES = 3;
 const OPT_LABELS  = ["A","B","C","D","E","F","G","H"];
+
+const RTC_CONFIG = {
+  iceServers: [
+    { urls: "stun:stun.l.google.com:19302"  },
+    { urls: "stun:stun1.l.google.com:19302" },
+    { urls: "stun:stun.cloudflare.com:3478" },
+  ],
+};
 
 const FontLoader = () => (
   <style>{`
@@ -242,14 +252,41 @@ function ResultScreen({ result, onDone }) {
   );
 }
 
+/**
+ * Tiny helper — mounts a hidden video element and starts the camera stream
+ * so FaceVerifier has a live feed to work with.
+ */
+function VerifierCameraInit({ videoRef, streamRef, onBlocked }) {
+  useEffect(() => {
+    if (streamRef.current) return; // already running
+    navigator.mediaDevices
+      .getUserMedia({ video: true, audio: false })
+      .then(stream => {
+        streamRef.current = stream;
+        if (videoRef.current) videoRef.current.srcObject = stream;
+      })
+      .catch(onBlocked);
+  }, []);
+
+  return (
+    <video
+      ref={videoRef}
+      autoPlay
+      muted
+      playsInline
+      style={{ position: "fixed", opacity: 0, pointerEvents: "none", width: 1, height: 1 }}
+    />
+  );
+}
+
 export default function ExamPage() {
   const { id: testId } = useParams();
   const navigate        = useNavigate();
   const { user }        = useAuth();
 
-
+  // ── Existing refs ──────────────────────────────────────────────────────
   const cameraVideoRef  = useRef(null);
-  const cameraStreamRef = useRef(null);   // local only, no streaming
+  const cameraStreamRef = useRef(null);
   const startTimeRef    = useRef(null);
   const answersRef      = useRef({});
   const totalTimerRef   = useRef(null);
@@ -260,7 +297,12 @@ export default function ExamPage() {
   const devRef  = useRef(0);
   const escRef  = useRef(0);
 
+  // ── WebRTC / Socket refs (NEW) ─────────────────────────────────────────
+  const socketRef       = useRef(null);   // socket.io instance
+  const pcsRef          = useRef({});     // { camera: RTCPeerConnection, screen: RTCPeerConnection }
+  const screenStreamRef = useRef(null);   // screen capture stream
 
+  // ── Existing state ─────────────────────────────────────────────────────
   const [testData,          setTestData]          = useState(null);
   const [loading,           setLoading]           = useState(true);
   const [started,           setStarted]           = useState(false);
@@ -281,13 +323,14 @@ export default function ExamPage() {
   const [result,            setResult]            = useState(null);
   const [lockedSections,    setLockedSections]    = useState(new Set());
   const [showSectionSubmit, setShowSectionSubmit] = useState(false);
+  const [identityVerified,  setIdentityVerified]  = useState(false);
 
   const sections       = testData?.sections ?? [];
   const activeSection  = sections[activeSectionIdx] ?? null;
   const totalQuestions = useMemo(() => sections.reduce((a, s) => a + s.questions.length, 0), [sections]);
   const answeredCount  = useMemo(() => Object.values(answers).filter(v => v !== "" && v != null).length, [answers]);
 
-
+  // ── Fetch test data (unchanged) ────────────────────────────────────────
   useEffect(() => {
     if (!user) { navigate("/login"); return; }
     testAPI.getTest(testId).then(({ data, error }) => {
@@ -300,7 +343,155 @@ export default function ExamPage() {
     });
   }, [testId, user, navigate]);
 
+  // ── WebRTC: create one peer connection and send offer (NEW) ────────────
+  const startRTCStream = useCallback(async (streamType, stream) => {
+    if (!socketRef.current || pcsRef.current[streamType]) return;
 
+    const pc = new RTCPeerConnection(RTC_CONFIG);
+    pcsRef.current[streamType] = pc;
+
+    stream.getTracks().forEach(track => pc.addTrack(track, stream));
+
+    pc.onicecandidate = ({ candidate }) => {
+      if (candidate) {
+        socketRef.current?.emit("ice:fromStudent", {
+          testId,
+          userId: user._id,
+          streamType,
+          candidate,
+        });
+      }
+    };
+
+    pc.oniceconnectionstatechange = () => {
+      if (pc.iceConnectionState === "failed" || pc.iceConnectionState === "disconnected") {
+        pc.restartIce?.();
+      }
+    };
+
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+
+    socketRef.current.emit("webrtc:offer", {
+      testId,
+      userId:   user._id,
+      username: user.username ?? user.email,
+      streamType,
+      offer,
+    });
+  }, [testId, user]);
+
+  // ── WebRTC: screen capture (NEW) ───────────────────────────────────────
+  const startScreenShare = useCallback(async () => {
+    try {
+      const stream = await navigator.mediaDevices.getDisplayMedia({
+        video: { frameRate: 5 },
+        audio: false,
+      });
+      screenStreamRef.current = stream;
+      // If student clicks browser's "Stop sharing" button
+      stream.getVideoTracks()[0].onended = () => {
+        pcsRef.current.screen?.close();
+        delete pcsRef.current.screen;
+      };
+      await startRTCStream("screen", stream);
+    } catch (err) {
+      // Non-fatal: camera stream still continues
+      console.warn("[WebRTC] Screen share denied or unavailable:", err.message);
+    }
+  }, [startRTCStream]);
+
+  // ── WebRTC: connect socket + stream when exam starts (NEW) ─────────────
+  useEffect(() => {
+    if (!started || !user || !testId) return;
+
+    const token =
+      localStorage.getItem("token_student") ??
+      localStorage.getItem("token_creator") ??
+      localStorage.getItem("token");
+
+    const socket = io(SOCKET_URL, { auth: { token }, transports: ["websocket"] });
+    socketRef.current = socket;
+
+    socket.on("connect", async () => {
+      // Announce student presence to the monitor panel
+      socket.emit("student:join", {
+        testId,
+        userId:   user._id,
+        username: user.username ?? user.email,
+      });
+
+      // Send camera stream (already live from startExam)
+      if (cameraStreamRef.current) {
+        await startRTCStream("camera", cameraStreamRef.current);
+      }
+
+      // Prompt for screen share
+      await startScreenShare();
+    });
+
+    // Creator answered our camera/screen offer → complete handshake
+    socket.on("webrtc:answer", async ({ streamType, answer }) => {
+      const pc = pcsRef.current[streamType];
+      if (!pc) return;
+      try {
+        await pc.setRemoteDescription(new RTCSessionDescription(answer));
+      } catch (err) {
+        console.error("[WebRTC] setRemoteDescription failed:", err);
+      }
+    });
+
+    socket.on("proctor:warn", ({ message }) => {
+  setWarning(`🚨 Proctor: ${message}`);
+  setTimeout(() => setWarning(""), 6000); // show longer than regular warnings
+});
+
+socket.on("proctor:chat", ({ message }) => {
+  setWarning(`💬 Proctor: ${message}`);
+  setTimeout(() => setWarning(""), 8000);
+});
+
+socket.on("proctor:terminate", () => {
+  setWarning("🚨 Your exam has been terminated by the proctor.");
+  setTimeout(() => finishExam(true), 4000); // show message for 4s then submit
+});
+
+    // ICE candidate from creator → forward to correct peer connection
+    socket.on("ice:toStudent", async ({ streamType, candidate }) => {
+      const pc = pcsRef.current[streamType];
+      if (pc && candidate) {
+        try { await pc.addIceCandidate(new RTCIceCandidate(candidate)); } catch {}
+      }
+    });
+
+
+
+    // Cleanup on unmount or when started flips back to false
+    return () => {
+      Object.values(pcsRef.current).forEach(pc => pc.close());
+      pcsRef.current = {};
+      screenStreamRef.current?.getTracks().forEach(t => t.stop());
+      screenStreamRef.current = null;
+      socket.disconnect();
+      socketRef.current = null;
+    };
+  }, [started, user, testId, startRTCStream, startScreenShare]);
+
+  // ── Push violation counts to monitor panel in real time (NEW) ──────────
+  const emitViolation = useCallback(() => {
+    socketRef.current?.emit("violation", {
+      testId,
+      userId: user?._id,
+      violations: {
+        tabs:   tabRef.current,
+        face:   faceRef.current,
+        device: devRef.current,
+        esc:    escRef.current,
+      },
+    });
+  }, [testId, user]);
+
+  // ── finishExam — unchanged logic, +socket submitted event (MODIFIED) ───
   const finishExam = useCallback(async (autoSubmit = false) => {
     if (finishCalledRef.current) return;
     finishCalledRef.current = true;
@@ -310,6 +501,10 @@ export default function ExamPage() {
     cameraStreamRef.current?.getTracks().forEach(t => t.stop());
     if (document.fullscreenElement) { try { await document.exitFullscreen(); } catch {} }
     const timeTaken = startTimeRef.current ? Math.round((Date.now() - startTimeRef.current) / 1000) : 0;
+
+    // Notify monitor panel the student has submitted (NEW)
+    socketRef.current?.emit("student:submitted", { testId, userId: user?._id });
+
     const { data } = await attemptAPI.submit({
       testId, answers: answersRef.current, timeTaken,
       violations: { tabSwitches: tabRef.current, faceWarnings: faceRef.current, deviceFlags: devRef.current, fullscreenExits: escRef.current },
@@ -319,9 +514,9 @@ export default function ExamPage() {
     setShowSubmit(false);
     if (data?.attempt) { setResult({ ...data.attempt, timeTaken }); }
     else { navigate("/student-dashboard"); }
-  }, [testId, navigate]);
+  }, [testId, navigate, user]);
 
-
+  // ── advanceSection (unchanged) ─────────────────────────────────────────
   const advanceSection = useCallback((fromIdx, lockIt = false) => {
     const newLocked = lockIt
       ? new Set([...lockedSections, fromIdx])
@@ -351,7 +546,7 @@ export default function ExamPage() {
     setShowSectionSubmit(false);
   }, [sections, lockedSections]);
 
-
+  // ── Total timer (unchanged) ────────────────────────────────────────────
   useEffect(() => {
     if (!started) return;
     totalTimerRef.current = setInterval(() => {
@@ -363,7 +558,7 @@ export default function ExamPage() {
     return () => clearInterval(totalTimerRef.current);
   }, [started, finishExam]);
 
-
+  // ── Section timer (unchanged) ──────────────────────────────────────────
   useEffect(() => {
     if (!started) return;
     clearInterval(sectionTimerRef.current);
@@ -383,7 +578,7 @@ export default function ExamPage() {
     return () => clearInterval(sectionTimerRef.current);
   }, [started, activeSectionIdx, sections, advanceSection]);
 
-
+  // ── handleAnswer (unchanged) ───────────────────────────────────────────
   const handleAnswer = useCallback((key, value) => {
     setAnswers(prev => {
       const next = { ...prev, [key]: value };
@@ -392,7 +587,7 @@ export default function ExamPage() {
     });
   }, []);
 
-
+  // ── handleDetect — uncommented + emitViolation added (MODIFIED) ────────
   const handleDetect = useCallback((msg) => {
     setWarning(msg);
     setWarningCount(c => c + 1);
@@ -402,21 +597,29 @@ export default function ExamPage() {
     else if (m.includes("face") || m.includes("person") || m.includes("multiple")) { faceRef.current++; setFaceCount(faceRef.current); }
     else if (m.includes("phone") || m.includes("book") || m.includes("device"))    { devRef.current++;  setDevCount(devRef.current);   }
     else if (m.includes("fullscreen") || m.includes("esc"))                         { escRef.current++;  setEscCount(escRef.current);   }
-  }, []);
+    // Push updated violation counts to the live monitor panel (NEW)
+    emitViolation();
+  }, [emitViolation]);
 
-
+  // ── startExam (unchanged) ──────────────────────────────────────────────
   const startExam = async () => {
+    if (!identityVerified) return;
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-      cameraStreamRef.current = stream;
-      if (cameraVideoRef.current) cameraVideoRef.current.srcObject = stream;
+      if (!cameraStreamRef.current) {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+        cameraStreamRef.current = stream;
+      }
+      if (cameraVideoRef.current && cameraStreamRef.current) {
+        cameraVideoRef.current.srcObject = cameraStreamRef.current;
+        await cameraVideoRef.current.play().catch(() => {});
+      }
       await document.documentElement.requestFullscreen();
       startTimeRef.current = Date.now();
       setStarted(true);
     } catch (err) { console.error("Start error:", err); setCameraBlocked(true); }
   };
 
-
+  // ── Fullscreen guard (unchanged) ───────────────────────────────────────
   useEffect(() => {
     const handle = async () => {
       if (!started) return;
@@ -431,21 +634,21 @@ export default function ExamPage() {
     return () => document.removeEventListener("fullscreenchange", handle);
   }, [started, handleDetect]);
 
-
+  // ── Tab switch guard (unchanged) ───────────────────────────────────────
   useEffect(() => {
     const h = () => { if (document.hidden && started) handleDetect("⚠️ Tab switched!"); };
     document.addEventListener("visibilitychange", h);
     return () => document.removeEventListener("visibilitychange", h);
   }, [started, handleDetect]);
 
-
+  // ── Context menu block (unchanged) ────────────────────────────────────
   useEffect(() => {
     const b = e => e.preventDefault();
     window.addEventListener("contextmenu", b);
     return () => window.removeEventListener("contextmenu", b);
   }, []);
 
-
+  // ── Beacon on page unload (unchanged) ─────────────────────────────────
   useEffect(() => {
     const h = () => {
       if (!started) return;
@@ -460,18 +663,32 @@ export default function ExamPage() {
     return () => window.removeEventListener("beforeunload", h);
   }, [started, testId]);
 
-
+  // ── Cleanup on unmount (unchanged) ────────────────────────────────────
   useEffect(() => () => {
     cameraStreamRef.current?.getTracks().forEach(t => t.stop());
     clearInterval(totalTimerRef.current);
     clearInterval(sectionTimerRef.current);
   }, []);
 
+  // ── Guards ─────────────────────────────────────────────────────────────
   if (loading) return (
     <div className="h-screen bg-zinc-950 flex items-center justify-center">
       <FontLoader /><Loader2 size={24} className="text-indigo-400 animate-spin" />
     </div>
   );
+
+  if (!identityVerified) return (
+    <div className="h-screen bg-zinc-950">
+      <FontLoader />
+      <VerifierCameraInit videoRef={cameraVideoRef} streamRef={cameraStreamRef} onBlocked={() => setCameraBlocked(true)} />
+      <FaceVerifier
+        videoRef={cameraVideoRef}
+        onVerified={() => setIdentityVerified(true)}
+        onViolation={handleDetect}
+      />
+    </div>
+  );
+
   if (result) return <ResultScreen result={result} onDone={() => navigate("/student-dashboard")} />;
 
   const totalWarnings   = tabCount + faceCount + devCount;
@@ -493,12 +710,13 @@ export default function ExamPage() {
     return null;
   })();
 
+  // ── JSX — identical to original ───────────────────────────────────────
   return (
     <div style={{ fontFamily: "'DM Sans', sans-serif" }}
       className="h-screen w-screen bg-zinc-950 text-zinc-100 flex flex-col overflow-hidden select-none">
       <FontLoader />
 
-      {}
+      {/* Header */}
       <header className="h-14 shrink-0 flex items-center justify-between px-5 bg-zinc-950 border-b border-zinc-800">
         <div className="flex items-center gap-4 min-w-0">
           <div className="min-w-0">
@@ -547,10 +765,10 @@ export default function ExamPage() {
         </div>
       </header>
 
-      {}
+      {/* Body */}
       <div className="flex flex-1 min-h-0">
 
-        {}
+        {/* Left sidebar — camera + stats */}
         <aside className="w-56 shrink-0 flex-col border-r border-zinc-800 bg-zinc-950 hidden md:flex overflow-y-auto"
           style={{ scrollbarWidth: "thin", scrollbarColor: "#3f3f46 transparent" }}>
           <div className="relative bg-black aspect-video shrink-0 overflow-hidden">
@@ -562,6 +780,7 @@ export default function ExamPage() {
             ) : (
               <>
                 <video ref={cameraVideoRef} autoPlay muted playsInline className="w-full h-full object-cover" />
+                {/* FaceTracker and ObjectDetector re-enabled — they call handleDetect which now also emits violations */}
                 <FaceTracker    videoRef={cameraVideoRef} onDetect={handleDetect} />
                 <ObjectDetector videoRef={cameraVideoRef} onDetect={handleDetect} />
                 <AnimatePresence>
@@ -627,10 +846,10 @@ export default function ExamPage() {
           )}
         </aside>
 
-        {}
+        {/* Main content */}
         <main className="flex-1 flex flex-col min-w-0">
 
-          {}
+          {/* Section tabs */}
           {sections.length > 1 && (
             <div
               className="shrink-0 flex items-center gap-2 px-4 py-3 border-b border-zinc-800 bg-zinc-950"
@@ -670,7 +889,7 @@ export default function ExamPage() {
             </div>
           )}
 
-          {}
+          {/* Section header + nav */}
           {activeSection && started && (
             <>
               <div className="shrink-0 flex items-center justify-between px-5 py-3 border-b border-zinc-800">
@@ -713,7 +932,7 @@ export default function ExamPage() {
             </>
           )}
 
-          {}
+          {/* Questions scroll area */}
           <div className="flex-1 overflow-y-auto p-5 space-y-4" style={{ scrollbarWidth: "thin", scrollbarColor: "#3f3f46 transparent" }}>
             {!started ? (
               <div className="flex flex-col items-center justify-center h-full gap-4 text-center">
@@ -753,7 +972,7 @@ export default function ExamPage() {
           </div>
         </main>
 
-        {}
+        {/* Right question palette */}
         {started && (
           <aside className="w-16 shrink-0 border-l border-zinc-800 bg-zinc-950 flex-col hidden sm:flex overflow-y-auto"
             style={{ scrollbarWidth: "thin", scrollbarColor: "#3f3f46 transparent" }}>
@@ -809,7 +1028,7 @@ export default function ExamPage() {
         )}
       </div>
 
-      {}
+      {/* Dialogs */}
       <AnimatePresence>
         {showSubmit && (
           <SubmitDialog answered={answeredCount} total={totalQuestions} submitting={submitting}
@@ -826,6 +1045,7 @@ export default function ExamPage() {
         )}
       </AnimatePresence>
 
+      {/* Fullscreen block overlay */}
       {blocked && (
         <div className="fixed inset-0 bg-zinc-950/95 z-50 flex flex-col items-center justify-center gap-4">
           <FontLoader />
@@ -844,6 +1064,7 @@ export default function ExamPage() {
         </div>
       )}
 
+      {/* Camera blocked overlay */}
       {cameraBlocked && (
         <div className="fixed inset-0 bg-zinc-950/95 z-50 flex flex-col items-center justify-center gap-4">
           <FontLoader />

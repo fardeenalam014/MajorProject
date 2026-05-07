@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import Logo from "../components/Logo";
 import "./LandingPage.css";
+import ThemeSwitcher from "../components/ThemeSwitcher";
 
 
 const FU = ({ children, delay = 0, className = "" }) => (
@@ -75,7 +76,7 @@ export default function LandingPage() {
   const navigate = useNavigate();
 
   return (
-    <div style={{ background: "#050507", width: "100%", maxWidth: "100vw", overflowX: "hidden" }}>
+    <div style={{ background: "var(--lp-bg)", width: "100%", maxWidth: "100vw", overflowX: "hidden" }}>
 
       {}
       <motion.nav
@@ -86,10 +87,13 @@ export default function LandingPage() {
       >
         <Logo size="sm" />
         <div className="nav-actions">
+          <button className="btn-ghost" onClick={() => navigate("/about")}>About</button>
+          <button className="btn-ghost" onClick={() => navigate("/contact")}>Contact</button>
           <button className="btn-ghost" onClick={() => navigate("/login")}>Sign in</button>
           <button className="btn-primary" onClick={() => navigate("/register")}>
             Get started <ArrowUpRight size={13} />
           </button>
+          <ThemeSwitcher />
         </div>
       </motion.nav>
 
@@ -194,7 +198,7 @@ export default function LandingPage() {
                 />
                 <div style={{
                   position: "absolute", inset: 0,
-                  background: "linear-gradient(135deg, rgba(99,102,241,.25) 0%, transparent 60%)",
+                  background: "linear-gradient(135deg, var(--indigo-dim) 0%, transparent 60%)",
                 }} />
               </div>
 
@@ -214,7 +218,7 @@ export default function LandingPage() {
           </FU>
 
           <FU delay={0.15}>
-            <span className="split-eyebrow mono" style={{ color: "#6366f1" }}>For Students</span>
+            <span className="split-eyebrow mono" style={{ color: "var(--indigo)" }}>For Students</span>
             <h2 className="split-heading bebas">FOCUS ON<br />THE EXAM</h2>
             <p className="split-body">
               Clean, distraction-free interface. Navigate questions freely within each section,
@@ -224,7 +228,7 @@ export default function LandingPage() {
             <div className="checklist">
               {STUDENT_CHECKLIST.map((item, i) => (
                 <div className="checklist-item" key={i}>
-                  <CheckCircle2 size={15} style={{ color: "#10b981", marginTop: 2, flexShrink: 0 }} />
+                  <CheckCircle2 size={15} style={{ color: "var(--emerald)", marginTop: 2, flexShrink: 0 }} />
                   <span>{item}</span>
                 </div>
               ))}
@@ -240,7 +244,7 @@ export default function LandingPage() {
       <section className="section-split" style={{ paddingTop: 0 }}>
         <div className="split-grid reversed">
           <FU delay={0.15}>
-            <span className="split-eyebrow mono" style={{ color: "#a78bfa" }}>For Creators</span>
+            <span className="split-eyebrow mono" style={{ color: "var(--indigo)" }}>For Creators</span>
             <h2 className="split-heading bebas">BUILD TESTS<br />IN MINUTES</h2>
             <p className="split-body">
               A three-panel editor that gets out of your way. Add sections, set timers,
@@ -250,7 +254,7 @@ export default function LandingPage() {
             <div className="checklist">
               {CREATOR_CHECKLIST.map((item, i) => (
                 <div className="checklist-item" key={i}>
-                  <CheckCircle2 size={15} style={{ color: "#a78bfa", marginTop: 2, flexShrink: 0 }} />
+                  <CheckCircle2 size={15} style={{ color: "var(--indigo)", marginTop: 2, flexShrink: 0 }} />
                   <span>{item}</span>
                 </div>
               ))}
@@ -269,7 +273,7 @@ export default function LandingPage() {
                 />
                 <div style={{
                   position: "absolute", inset: 0,
-                  background: "linear-gradient(225deg, rgba(167,139,250,.2) 0%, transparent 60%)",
+                  background: "linear-gradient(225deg, var(--indigo-dim) 0%, transparent 60%)",
                 }} />
               </div>
 
@@ -361,7 +365,7 @@ export default function LandingPage() {
           <div className="cta-box">
             <div className="cta-corner-glow" />
             <div className="cta-icon">
-              <Zap size={22} style={{ color: "#818cf8" }} />
+              <Zap size={22} style={{ color: "var(--indigo)" }} />
             </div>
             <h2 className="cta-title bebas">READY TO RUN<br />SECURE EXAMS?</h2>
             <p className="cta-body">

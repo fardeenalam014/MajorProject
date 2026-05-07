@@ -50,7 +50,7 @@ function MiniBar({ pct, color = "#6366f1" }) {
 export default function StudentDashboard() {
   const navigate = useNavigate();
   const { user: authUser, logout: authLogout } = useAuth();
-  // storage keys in this demo use the student's email; fall back to legacy localStorage
+
   const user = authUser?.email || authUser?.username || localStorage.getItem("studentUser");
 
   const [testId,  setTestId]  = useState("");
@@ -59,7 +59,7 @@ export default function StudentDashboard() {
   const [filter,  setFilter]  = useState("all");
   const [joinErr, setJoinErr] = useState("");
 
-  /* ─── load + merge attempt results ─── */
+  
   const loadAndSync = useCallback(() => {
     const saved      = getStudentTests(user);
     const myAttempts = getAttemptsForStudent(user);
@@ -101,7 +101,7 @@ export default function StudentDashboard() {
     return () => window.removeEventListener("focus", loadAndSync);
   }, [loadAndSync, navigate, user]);
 
-  /* ─── join ─── */
+  
   const joinTest = () => {
     setJoinErr("");
     const id = testId.trim();
@@ -114,7 +114,7 @@ export default function StudentDashboard() {
     if (!found.published)                { setJoinErr("This test is not published yet."); return; }
     if (tests.find(t => t.id === found.id)) { setJoinErr("Already joined.");              return; }
 
-    /* write to shared enrollments — creator can see this immediately */
+    
     enrollStudent(found.id, user);
 
     const updated = [...tests, {
@@ -130,7 +130,7 @@ export default function StudentDashboard() {
     setTestId("");
   };
 
-  /* ─── start exam ─── */
+  
   const startTest = (t) => {
     localStorage.setItem("activeTestId",      t.id);
     localStorage.setItem("activeStudentUser", user);
@@ -161,7 +161,7 @@ export default function StudentDashboard() {
       className="min-h-screen min-w-screen bg-zinc-950 text-zinc-100 flex">
       <FontLoader />
 
-      {/* ── SIDEBAR ── */}
+      {}
       <aside className="hidden md:flex flex-col w-56 shrink-0 border-r border-zinc-800 bg-zinc-950">
         <div className="px-5 py-4 border-b border-zinc-800"><Logo size="sm" /></div>
         <div className="px-4 py-4 border-b border-zinc-800">
@@ -187,7 +187,7 @@ export default function StudentDashboard() {
         </div>
       </aside>
 
-      {/* ── MAIN ── */}
+      {}
       <main className="flex-1 flex flex-col overflow-y-auto"
         style={{ scrollbarWidth: "thin", scrollbarColor: "#3f3f46 transparent" }}>
 
@@ -211,7 +211,7 @@ export default function StudentDashboard() {
             <StatCard label="Completed" value={completed} color="emerald" />
           </div>
 
-          {/* join */}
+          {}
           <div className="space-y-1.5">
             <div className="flex gap-3">
               <div className={`flex-1 flex items-center gap-2 bg-zinc-900 border rounded-xl px-4
@@ -238,7 +238,7 @@ export default function StudentDashboard() {
             {joinErr && <p className="mono text-[11px] text-rose-400 pl-1">{joinErr}</p>}
           </div>
 
-          {/* search + filter */}
+          {}
           <div className="flex gap-3">
             <div className="flex-1 flex items-center gap-2 bg-zinc-900 border border-zinc-800
               rounded-xl px-4 focus-within:border-zinc-700 transition-all">
@@ -263,7 +263,7 @@ export default function StudentDashboard() {
             </div>
           </div>
 
-          {/* test grid */}
+          {}
           {filtered.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 gap-3 text-center">
               <div className="w-12 h-12 rounded-2xl bg-zinc-900 border border-zinc-800
@@ -313,7 +313,7 @@ export default function StudentDashboard() {
                       )}
                     </div>
 
-                    {/* result block — only after submit */}
+                    {}
                     {t.status === "completed" && (
                       <div className="mb-4 rounded-xl bg-zinc-950 border border-zinc-800 p-3 space-y-2">
                         <div className="flex items-center justify-between">

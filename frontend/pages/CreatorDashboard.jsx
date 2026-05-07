@@ -10,6 +10,7 @@ import Logo             from "../components/Logo";
 import LiveMonitorPanel from "../components/LiveMonitorPanel";
 import { useAuth }       from "../context/AuthContext";
 import { testAPI, enrollmentAPI, attemptAPI } from "../utils/api";
+import ThemeSwitcher from "../components/ThemeSwitcher";
 
 const FontLoader = () => (
   <style>{`
@@ -435,6 +436,7 @@ export default function CreatorDashboard() {
             <div className="min-w-0">
               <p className="text-xs text-zinc-500">Creator</p>
               <p className="text-sm font-medium text-zinc-200 truncate">{user?.username}</p>
+              <p className="mono text-[10px] text-zinc-600 mt-0.5">{user?.email}</p>
             </div>
           </div>
         </div>
@@ -466,16 +468,17 @@ export default function CreatorDashboard() {
 
         {}
         <div className="h-14 shrink-0 flex items-center justify-between px-6
-          bg-zinc-950/95 border-b border-zinc-800 backdrop-blur-sm">
+          bg-zinc-950/95  backdrop-blur-sm mt-3">
           <div>
             <h1 className="font-semibold text-sm text-zinc-200">Creator Dashboard</h1>
-            <p className="mono text-[10px] text-zinc-600 mt-0.5">{user?.email}</p>
+            
           </div>
           <button onClick={() => navigate("/create-test")}
             className="md:hidden flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm
               font-semibold bg-indigo-500 hover:bg-indigo-400 text-white transition-colors">
             <PlusCircle size={13} />
           </button>
+          <ThemeSwitcher />
         </div>
 
         {}

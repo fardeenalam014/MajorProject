@@ -1,18 +1,41 @@
+/**
+ * socket/liveSignal.js
+ *
+ * Handles all WebRTC signaling and live proctoring events.
+ * Called from server.js as: require("./socket/liveSignal")(io)
+ *
+ * Fixes:
+ *  - Offers queued if creator hasn't joined yet, flushed on creator:join
+ *  - student:join updates socketId on reconnect
+ *  - Disconnect cleanup correctly sweeps all rooms
+ */
 
 const jwt = require("jsonwebtoken");
 
+/**
+ * rooms[testId] = {
+ *   creatorSocketId: string | null,
+ *   students: { [userId]: { socketId, userId, username, violations } },
+ *   pendingOffers: [ { userId, username, streamType, offer } ]
+ * }
+ */
 const rooms = {};
 
-module.exports = (io) => {
+function getRoom(testId) {
+  if (!rooms[testId]) {
+    rooms[testId] = { creatorSocketId: null, students: {}, pendingOffers: [] };
+  }
+  return rooms[testId];
+}
 
+module.exports = function liveSignal(io) {
 
+  /* ── Auth middleware ── */
   io.use((socket, next) => {
     const token = socket.handshake.auth?.token;
     if (!token) return next(new Error("No token"));
     try {
-      const decoded   = jwt.verify(token, process.env.JWT_SECRET);
-      socket.userId   = String(decoded.id);
-      socket.userRole = decoded.role;
+      socket.user = jwt.verify(token, process.env.JWT_SECRET);
       next();
     } catch {
       next(new Error("Invalid token"));
@@ -20,120 +43,186 @@ module.exports = (io) => {
   });
 
   io.on("connection", (socket) => {
+    console.log(`[Socket] Connected: ${socket.id}`);
 
-
+    /* ══════════════════════════════════════════
+       CREATOR joins to watch a test
+    ══════════════════════════════════════════ */
     socket.on("creator:join", ({ testId }) => {
-      if (!rooms[testId]) rooms[testId] = { creatorSocketId: null, students: {} };
-      rooms[testId].creatorSocketId = socket.id;
-      socket.join(testId);
-      socket.testId = testId;
+      const room = getRoom(testId);
+      room.creatorSocketId = socket.id;
+      socket.join(`room:${testId}`);
 
-
-      const snap = Object.values(rooms[testId].students).map(s => ({
-        userId: s.userId, username: s.username, violations: s.violations,
+      // Send snapshot of students already in the room
+      const snap = Object.values(room.students).map(s => ({
+        userId:     s.userId,
+        username:   s.username,
+        violations: s.violations,
       }));
       socket.emit("room:snapshot", { students: snap });
-    });
 
-
-    socket.on("student:join", ({ testId, username }) => {
-      if (!rooms[testId]) rooms[testId] = { creatorSocketId: null, students: {} };
-      rooms[testId].students[socket.userId] = {
-        userId: socket.userId, socketId: socket.id,
-        username, violations: { tabs: 0, face: 0, device: 0, esc: 0 },
-      };
-      socket.join(testId);
-      socket.testId   = testId;
-      socket.username = username;
-
-      getCreator(io, testId)?.emit("student:joined", {
-        userId: socket.userId, username,
-      });
-    });
-
-
-    socket.on("webrtc:offer", ({ testId, streamType, offer }) => {
-      getCreator(io, testId)?.emit("webrtc:offer", {
-        userId:   socket.userId,
-        username: rooms[testId]?.students[socket.userId]?.username,
-        streamType, offer,
-      });
-    });
-
-
-    socket.on("webrtc:answer", ({ testId, userId, streamType, answer }) => {
-      getStudent(io, testId, userId)?.emit("webrtc:answer", { streamType, answer });
-    });
-
-
-    socket.on("ice:toCreator", ({ testId, streamType, candidate }) => {
-      getCreator(io, testId)?.emit("ice:fromStudent", {
-        userId: socket.userId, streamType, candidate,
-      });
-    });
-
-    socket.on("ice:toStudent", ({ testId, userId, streamType, candidate }) => {
-      getStudent(io, testId, userId)?.emit("ice:fromCreator", { streamType, candidate });
-    });
-
-
-    socket.on("violation", ({ testId, type, message }) => {
-      const student = rooms[testId]?.students[socket.userId];
-      if (!student) return;
-
-      if (type === "tab")        student.violations.tabs++;
-      if (type === "face")       student.violations.face++;
-      if (type === "device")     student.violations.device++;
-      if (type === "fullscreen") student.violations.esc++;
-
-      getCreator(io, testId)?.emit("violation", {
-        userId: socket.userId, username: student.username,
-        type, message, violations: student.violations, at: Date.now(),
-      });
-    });
-
-
-    socket.on("student:submitted", ({ testId }) => {
-      const student = rooms[testId]?.students[socket.userId];
-      if (!student) return;
-      getCreator(io, testId)?.emit("student:submitted", {
-        userId: socket.userId, username: student.username,
-      });
-      delete rooms[testId].students[socket.userId];
-      cleanRoom(testId);
-    });
-
-    socket.on("disconnect", () => {
-      const testId = socket.testId;
-      if (!testId || !rooms[testId]) return;
-      const room = rooms[testId];
-
-      if (room.creatorSocketId === socket.id) room.creatorSocketId = null;
-
-      const student = room.students[socket.userId];
-      if (student) {
-        getCreator(io, testId)?.emit("student:left", {
-          userId: socket.userId, username: student.username,
-        });
-        delete room.students[socket.userId];
+      // Flush offers that arrived before the creator joined
+      if (room.pendingOffers.length > 0) {
+        console.log(`[Socket] Flushing ${room.pendingOffers.length} pending offer(s) to creator for test ${testId}`);
+        room.pendingOffers.forEach(payload => socket.emit("webrtc:offer", payload));
+        room.pendingOffers = [];
       }
 
-      cleanRoom(testId);
+      console.log(`[Socket] Creator joined room: ${testId}`);
+    });
+
+    /* ══════════════════════════════════════════
+       STUDENT joins the exam room
+    ══════════════════════════════════════════ */
+    socket.on("student:join", ({ testId, userId, username }) => {
+      const room = getRoom(testId);
+      // Preserve existing violations if student reconnects
+      room.students[userId] = {
+        ...(room.students[userId] ?? {}),
+        socketId:   socket.id,
+        userId,
+        username,
+        violations: room.students[userId]?.violations ?? {},
+      };
+      socket.join(`room:${testId}`);
+
+      if (room.creatorSocketId) {
+        io.to(room.creatorSocketId).emit("student:joined", { userId, username });
+      }
+
+      console.log(`[Socket] Student joined: ${username} (${userId}) in test ${testId}`);
+    });
+
+    /* ══════════════════════════════════════════
+       WebRTC OFFER  student → creator
+    ══════════════════════════════════════════ */
+    socket.on("webrtc:offer", ({ testId, userId, username, streamType, offer }) => {
+      const room    = getRoom(testId);
+      const payload = { userId, username, streamType, offer };
+
+      if (room.creatorSocketId) {
+        io.to(room.creatorSocketId).emit("webrtc:offer", payload);
+      } else {
+        // Creator not in room yet — queue so it's sent when creator joins
+        console.log(`[Socket] Queuing offer from ${userId} (no creator yet in ${testId})`);
+        room.pendingOffers.push(payload);
+      }
+    });
+
+    /* ══════════════════════════════════════════
+       WebRTC ANSWER  creator → student
+    ══════════════════════════════════════════ */
+    socket.on("webrtc:answer", ({ testId, userId, streamType, answer }) => {
+      const room    = getRoom(testId);
+      const student = room.students[userId];
+      if (!student) return;
+      io.to(student.socketId).emit("webrtc:answer", { streamType, answer });
+    });
+
+    /* ══════════════════════════════════════════
+       ICE CANDIDATE  student → creator
+    ══════════════════════════════════════════ */
+    socket.on("ice:fromStudent", ({ testId, userId, streamType, candidate }) => {
+      const room = getRoom(testId);
+      if (!room.creatorSocketId) return;
+      io.to(room.creatorSocketId).emit("ice:fromStudent", { userId, streamType, candidate });
+    });
+
+    /* ══════════════════════════════════════════
+       ICE CANDIDATE  creator → student
+    ══════════════════════════════════════════ */
+    socket.on("ice:toStudent", ({ testId, userId, streamType, candidate }) => {
+      const room    = getRoom(testId);
+      const student = room.students[userId];
+      if (!student) return;
+      io.to(student.socketId).emit("ice:toStudent", { streamType, candidate });
+    });
+
+    /* ══════════════════════════════════════════
+       VIOLATION  student → creator
+    ══════════════════════════════════════════ */
+    socket.on("violation", ({ testId, userId, violations }) => {
+      const room = getRoom(testId);
+      if (room.students[userId]) room.students[userId].violations = violations;
+      if (room.creatorSocketId) {
+        io.to(room.creatorSocketId).emit("violation", { userId, violations });
+      }
+    });
+
+    /* ══════════════════════════════════════════
+       STUDENT submits exam
+    ══════════════════════════════════════════ */
+    socket.on("student:submitted", ({ testId, userId }) => {
+      const room = getRoom(testId);
+      delete room.students[userId];
+      if (room.creatorSocketId) {
+        io.to(room.creatorSocketId).emit("student:submitted", { userId });
+      }
+    });
+
+    /* ══════════════════════════════════════════
+   PROCTOR: warn a student
+══════════════════════════════════════════ */
+socket.on("proctor:warn", ({ testId, userId, message }) => {
+  const room    = getRoom(testId);
+  const student = room.students[userId];
+  if (!student) return;
+  io.to(student.socketId).emit("proctor:warn", { message });
+});
+
+/* ══════════════════════════════════════════
+   PROCTOR: chat — single student or broadcast
+══════════════════════════════════════════ */
+socket.on("proctor:chat", ({ testId, userId, message, broadcast }) => {
+  const room = getRoom(testId);
+  if (broadcast) {
+    // Send to every student currently in the room
+    Object.values(room.students).forEach(student => {
+      io.to(student.socketId).emit("proctor:chat", { message });
+    });
+  } else {
+    const student = room.students[userId];
+    if (!student) return;
+    io.to(student.socketId).emit("proctor:chat", { message });
+  }
+});
+
+/* ══════════════════════════════════════════
+   PROCTOR: terminate a student
+══════════════════════════════════════════ */
+socket.on("proctor:terminate", ({ testId, userId }) => {
+  const room    = getRoom(testId);
+  const student = room.students[userId];
+  if (!student) return;
+  io.to(student.socketId).emit("proctor:terminate");
+  // Remove from room immediately
+  delete room.students[userId];
+  if (room.creatorSocketId) {
+    io.to(room.creatorSocketId).emit("student:submitted", { userId });
+  }
+});
+
+    /* ══════════════════════════════════════════
+       DISCONNECT — clean up whichever role left
+    ══════════════════════════════════════════ */
+    socket.on("disconnect", () => {
+      for (const [testId, room] of Object.entries(rooms)) {
+        // Check if this was a student
+        for (const [userId, student] of Object.entries(room.students)) {
+          if (student.socketId === socket.id) {
+            delete room.students[userId];
+            if (room.creatorSocketId) {
+              io.to(room.creatorSocketId).emit("student:left", { userId });
+            }
+            console.log(`[Socket] Student left: ${userId} from test ${testId}`);
+          }
+        }
+        // Check if this was the creator
+        if (room.creatorSocketId === socket.id) {
+          room.creatorSocketId = null;
+          console.log(`[Socket] Creator left room: ${testId}`);
+        }
+      }
     });
   });
-
-
-  const getCreator  = (io, testId) => {
-    const id = rooms[testId]?.creatorSocketId;
-    return id ? io.sockets.sockets.get(id) : null;
-  };
-  const getStudent  = (io, testId, userId) => {
-    const id = rooms[testId]?.students[userId]?.socketId;
-    return id ? io.sockets.sockets.get(id) : null;
-  };
-  const cleanRoom   = (testId) => {
-    const r = rooms[testId];
-    if (r && !r.creatorSocketId && Object.keys(r.students).length === 0)
-      delete rooms[testId];
-  };
 };
