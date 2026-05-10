@@ -9,7 +9,6 @@
 const BASE = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
 const authHeaders = () => {
-  // Role-scoped keys take priority; legacy "token" key is fallback
   const token =
     localStorage.getItem("token_student") ??
     localStorage.getItem("token_creator") ??
@@ -43,9 +42,11 @@ const patch = (path, body) => request("PATCH",  path, body);
 const del   = (path)       => request("DELETE", path);
 
 export const authAPI = {
-  register: (body) => post("/auth/register", body),
-  login:    (body) => post("/auth/login",    body),
-  me:       ()     => get("/auth/me"),
+  register:       (body)            => post("/auth/register",                body),
+  login:          (body)            => post("/auth/login",                   body),
+  me:             ()                => get("/auth/me"),
+  forgotPassword: (email)           => post("/auth/forgot-password",         { email }),
+  resetPassword: (otp, password) => put("/auth/reset-password", { otp, password }),
 };
 
 export const testAPI = {
