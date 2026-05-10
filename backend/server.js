@@ -21,6 +21,14 @@ app.get("/api/health", (req, res) => {
     time:    new Date().toISOString(),
   });
 });
+// Keep Render free tier alive — pings every 10 minutes
+if (process.env.RENDER_EXTERNAL_URL) {
+  setInterval(() => {
+    fetch(`${process.env.RENDER_EXTERNAL_URL}/api/health`)
+      .then(() => console.log("✅ Keep-alive ping sent"))
+      .catch(() => {});
+  }, 10 * 60 * 1000);
+}
 app.use("/api/auth",        require("./routes/authRoutes"));
 app.use("/api/tests",       require("./routes/testRoutes"));
 app.use("/api/enrollments", require("./routes/enrollmentRoutes"));
