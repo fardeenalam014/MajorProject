@@ -5,6 +5,7 @@ const express      = require("express");
 const cors         = require("cors");
 const connectDB    = require("./config/db");
 const errorHandler = require("./middleware/errorHandler");
+
 connectDB();
 const app = express();
 app.use(cors({
@@ -33,6 +34,7 @@ app.use("/api/auth",        require("./routes/authRoutes"));
 app.use("/api/tests",       require("./routes/testRoutes"));
 app.use("/api/enrollments", require("./routes/enrollmentRoutes"));
 app.use("/api/attempts",    require("./routes/attemptRoutes"));
+app.use("/api/invites", require("./routes/inviteRoutes"));
 app.use((req, res) => {
   res.status(404).json({ success: false, message: `Route ${req.originalUrl} not found` });
 });

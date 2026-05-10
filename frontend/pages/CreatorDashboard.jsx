@@ -4,13 +4,16 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   LogOut, Trash2, Copy, Eye, EyeOff, PlusCircle, Clock, Hash,
   CheckCircle2, FileText, BarChart3, Users, X,
-  Search, ShieldAlert, Award, Timer, Loader2, Radio,
+  Search, ShieldAlert, Award, Timer, Loader2, Radio,Mail,
 } from "lucide-react";
 import Logo             from "../components/Logo";
 import LiveMonitorPanel from "../components/LiveMonitorPanel";
+import InvitePanel from "../components/InvitePanel";
 import { useAuth }       from "../context/AuthContext";
 import { testAPI, enrollmentAPI, attemptAPI } from "../utils/api";
 import ThemeSwitcher from "../components/ThemeSwitcher";
+
+
 
 const FontLoader = () => (
   <style>{`
@@ -364,6 +367,7 @@ export default function CreatorDashboard() {
   const [copied,   setCopied]   = useState(null);
   const [panel,    setPanel]    = useState(null);
   const [pageLoad, setPageLoad] = useState(true);
+  const [showInvite, setShowInvite] = useState(false);
 
   const loadTests = useCallback(async () => {
     const { data } = await testAPI.getMyTests();
@@ -405,7 +409,22 @@ export default function CreatorDashboard() {
 
   return (
     <div style={{ fontFamily: "'DM Sans', sans-serif" }}
-      className="h-screen min-w-screen bg-zinc-950 text-zinc-100 flex overflow-hidden">
+  className="h-screen min-w-screen bg-zinc-950 text-zinc-100 flex overflow-hidden">
+
+  {/* Invite Panel — slides in next to sidebar */}
+  <AnimatePresence>
+    {showInvite && (
+      <motion.div
+        initial={{ width: 0, opacity: 0 }}
+        animate={{ width: 256, opacity: 1 }}
+        exit={{ width: 0, opacity: 0 }}
+        transition={{ type: "spring", damping: 28, stiffness: 260 }}
+        className="overflow-hidden shrink-0"
+      >
+        <InvitePanel tests={tests} onClose={() => setShowInvite(false)} />
+      </motion.div>
+    )}
+  </AnimatePresence>
       {}
       <FontLoader />
 
@@ -448,10 +467,21 @@ export default function CreatorDashboard() {
               font-semibold bg-indigo-500 hover:bg-indigo-400 text-white transition-colors">
             <PlusCircle size={14} /> New Test
           </button>
+          <button onClick={() => setShowInvite(o => !o)}
+  className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm
+    font-semibold border transition-all mt-2
+    ${showInvite
+      ? "bg-indigo-500/10 border-indigo-500/30 text-indigo-400"
+      : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-zinc-200"}`}>
+  <Mail size={14} /> Invite
+</button>
         </div>
 
         {}
-        <div className="flex-1 min-h-0" />
+        {/* <div className="flex-1 min-h-0" /> */}
+        <div className="flex-1 overflow-y-auto">
+  {/* <InvitePanel tests={tests} /> */}
+</div>
 
         {}
         <div className="px-4 pb-5 shrink-0 border-t border-zinc-800">
