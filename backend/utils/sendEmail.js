@@ -1,36 +1,22 @@
-const nodemailer = require("nodemailer");
+const { BrevoClient } = require("@getbrevo/brevo");
 
-const transporter = nodemailer.createTransport({
-  host: "smtp-relay.brevo.com",
-  port: 587,
-  secure: false,
-  family: 4,              // ← force IPv4
-  auth: {
-    user: process.env.BREVO_USER,
-    pass: process.env.BREVO_PASS,
-  },
-  tls: {
-    rejectUnauthorized: false
-  },
-  connectionTimeout: 10000,
-  greetingTimeout: 10000,
-  socketTimeout: 10000,
+const brevo = new BrevoClient({
+  apiKey: process.env.BREVO_API_KEY,
 });
 
-transporter.verify((error, success) => {
-  if (error) {
-    console.error("❌ Brevo SMTP failed:", error.message);
-  } else {
-    console.log("✅ Brevo SMTP ready");
-  }
-});
+console.log("BREVO_API_KEY:", process.env.BREVO_API_KEY ? "✅ loaded" : "❌ MISSING");
 
 module.exports = async function sendEmail({ to, subject, html }) {
-  const info = await transporter.sendMail({
-    from: '"AIExamGuard" <fardeenalam0768@gmail.com>',
-    to,
-    subject,
-    html,
-  });
-  console.log("✅ Email sent:", info.response);
+  try {
+    await brevo.transactionalEmails.sendTransacEmail({
+      sender: { email: "fardeenalam0768@gmail.com", name: "AIExamGuard" },
+      to: [{ email: to }],
+      subject,
+      htmlContent: html,
+    });
+    console.log("✅ Email sent to:", to);
+  } catch (err) {
+    console.error("❌ Email error:", err.message);
+    throw err;
+  }
 };
