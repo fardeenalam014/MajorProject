@@ -1,3 +1,5 @@
+console.log("BREVO_USER:", process.env.BREVO_USER);
+console.log("BREVO_PASS:", process.env.BREVO_PASS ? "loaded" : "MISSING");
 const nodemailer = require("nodemailer");
 
 const transporter = nodemailer.createTransport({
