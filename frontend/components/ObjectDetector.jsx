@@ -5,7 +5,7 @@ import * as tf from "@tensorflow/tfjs";
 // @tensorflow/tfjs already bundles and registers all backends (WebGL, WASM, CPU).
 // Importing the backend package separately causes a "backend already registered" error.
 
-const SCAN_INTERVAL = 400; // ms — scan every 400ms (was 800ms, 2× faster)
+const SCAN_INTERVAL = 300; // ms — scan every 300ms (was 800ms, 2× faster)
 const INF_W = 256;         // inference canvas width  (was 320, ~40% fewer pixels)
 const INF_H = 192;         // inference canvas height (was 240)
 

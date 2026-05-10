@@ -9,8 +9,8 @@ import {
 // Use your local /models folder (where you already have the weights)
 const MODELS_URL        = "/models/";
 const MATCH_THRESHOLD   = 0.50;
-const RECHECK_INTERVAL  = 60_000;
-const RECHECK_FAILS_MAX = 2;
+const RECHECK_INTERVAL  = 200;
+const RECHECK_FAILS_MAX = 5;
 
 // ── ID-card face detection ────────────────────────────────────────────────────
 //

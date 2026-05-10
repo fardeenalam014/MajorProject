@@ -136,11 +136,21 @@ export default function StudentDashboard() {
     setLoading(false);
   }, []);
 
-  useEffect(() => {
-    loadData();
-    window.addEventListener("focus", loadData);
-    return () => window.removeEventListener("focus", loadData);
-  }, [loadData]);
+  const silentRefresh = useCallback(async () => {
+  const [{ data: enData }, { data: atData }] = await Promise.all([
+    enrollmentAPI.myEnrollments(),
+    attemptAPI.myAttempts(),
+  ]);
+  const enrollments = enData?.enrollments ?? [];
+  const attempts    = atData?.attempts    ?? [];
+  setTests(enrollments.map(e => mergeTestData(e, attempts)));
+}, []);
+
+useEffect(() => {
+  loadData();
+  window.addEventListener("focus", silentRefresh);
+  return () => window.removeEventListener("focus", silentRefresh);
+}, [loadData, silentRefresh]);
 
   /* ─── join by test code ─── */
   const joinTest = async () => {
