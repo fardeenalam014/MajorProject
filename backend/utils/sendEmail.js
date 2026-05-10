@@ -5,14 +5,22 @@ const transporter = nodemailer.createTransport({
   port: 587,
   secure: false,
   auth: {
-    user: process.env.BREVO_USER,   // your Brevo login email
-    pass: process.env.BREVO_PASS,   // Brevo SMTP password (not your login password)
+    user: process.env.BREVO_USER,
+    pass: process.env.BREVO_PASS,
   },
+});
+
+transporter.verify((error, success) => {
+  if (error) {
+    console.error("❌ Brevo SMTP failed:", error.message);
+  } else {
+    console.log("✅ Brevo SMTP ready");
+  }
 });
 
 module.exports = async function sendEmail({ to, subject, html }) {
   const info = await transporter.sendMail({
-    from: '"AIExamGuard" <your@email.com>',
+    from: '"AIExamGuard" <your_brevo_email@gmail.com>',
     to,
     subject,
     html,
