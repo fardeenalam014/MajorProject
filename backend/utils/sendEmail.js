@@ -1,15 +1,20 @@
-console.log("BREVO_USER:", process.env.BREVO_USER);
-console.log("BREVO_PASS:", process.env.BREVO_PASS ? "loaded" : "MISSING");
 const nodemailer = require("nodemailer");
 
 const transporter = nodemailer.createTransport({
   host: "smtp-relay.brevo.com",
   port: 587,
   secure: false,
+  family: 4,              // ← force IPv4
   auth: {
     user: process.env.BREVO_USER,
     pass: process.env.BREVO_PASS,
   },
+  tls: {
+    rejectUnauthorized: false
+  },
+  connectionTimeout: 10000,
+  greetingTimeout: 10000,
+  socketTimeout: 10000,
 });
 
 transporter.verify((error, success) => {
@@ -22,7 +27,7 @@ transporter.verify((error, success) => {
 
 module.exports = async function sendEmail({ to, subject, html }) {
   const info = await transporter.sendMail({
-    from: '"AIExamGuard" <your_brevo_email@gmail.com>',
+    from: '"AIExamGuard" <fardeenalam0768@gmail.com>',
     to,
     subject,
     html,
