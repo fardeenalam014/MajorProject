@@ -4,9 +4,9 @@ import { Camera } from "@mediapipe/camera_utils";
 
 // ── Config ────────────────────────────────────────────────────────────────────
 const ALERT_COOLDOWN  = 4000;  // min ms between same-type alerts
-const MISSING_GRACE   = 1200;  // ms face must be absent before alerting
-const AWAY_GRACE      = 1500;  // ms looking away before alerting
-const MULTIPLE_GRACE  = 800;   // ms multiple faces visible before alerting
+const MISSING_GRACE   = 300;  // ms face must be absent before alerting
+const AWAY_GRACE      = 500;  // ms looking away before alerting
+const MULTIPLE_GRACE  = 400;   // ms multiple faces visible before alerting
 const YAW_THRESHOLD   = 0.26;  // horizontal head turn (left/right)
 const PITCH_THRESHOLD = 0.28;  // vertical head tilt (looking up)
 
@@ -75,8 +75,8 @@ export default function FaceTracker({ videoRef, onDetect }) {
     faceMesh.setOptions({
       maxNumFaces:            2,
       refineLandmarks:        false, // faster without iris tracking
-      minDetectionConfidence: 0.55,
-      minTrackingConfidence:  0.55,
+      minDetectionConfidence: 0.5,
+      minTrackingConfidence:  0.5,
     });
 
     faceMesh.onResults(results => {
@@ -123,11 +123,12 @@ export default function FaceTracker({ videoRef, onDetect }) {
     });
 
     const camera = new Camera(videoRef.current, {
-      width: 640, height: 480,
+      width: 320, height: 240,
       onFrame: async () => {
-        if (videoRef.current && mountedRef.current)
-          await faceMesh.send({ image: videoRef.current });
-      },
+  if (videoRef.current && mountedRef.current) {
+    await faceMesh.send({ image: videoRef.current }).catch(() => {});  // add .catch
+  }
+},
     });
 
     camera.start();
