@@ -1,19 +1,21 @@
-const { Resend } = require("resend");
+const nodemailer = require("nodemailer");
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const transporter = nodemailer.createTransport({
+  host: "smtp-relay.brevo.com",
+  port: 587,
+  secure: false,
+  auth: {
+    user: process.env.BREVO_USER,   // your Brevo login email
+    pass: process.env.BREVO_PASS,   // Brevo SMTP password (not your login password)
+  },
+});
 
 module.exports = async function sendEmail({ to, subject, html }) {
-  const { error } = await resend.emails.send({
-    from: "AIExamGuard <onboarding@resend.dev>",
+  const info = await transporter.sendMail({
+    from: '"AIExamGuard" <your@email.com>',
     to,
     subject,
     html,
   });
-
-  if (error) {
-    console.error("❌ Email error:", error);
-    throw new Error(error.message);
-  }
-
-  console.log("✅ Email sent to:", to);
+  console.log("✅ Email sent:", info.response);
 };
